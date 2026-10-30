@@ -26,6 +26,47 @@ Liens : [GitHub Project](https://github.com/users/Nathanmar/projects/3) · [Noti
 | [#12](https://github.com/Nathanmar/gaspirator/issues/12) | Filtrer les lots | Could | mobile |
 | [#13](https://github.com/Nathanmar/gaspirator/issues/13) | Exporter un récapitulatif des lots | Could | web |
 
+## Découpage par couche et endpoints
+
+Chaque story est découpée en une tâche par couche : **Back**, **Web** (y compris le back-office) et **Mobile**. Une story qui touche deux couches a donc deux lignes, trois si elle touche aussi le mobile. Pour le back, la colonne liste les endpoints exposés ; pour le web et le mobile, les endpoints consommés.
+
+Conventions : tous les endpoints sont préfixés par `/api`. `/me/...` désigne les ressources de l'utilisateur connecté et de son organisation. `/admin/...` est réservé aux admins.
+
+| US | Priorité | Couche | À faire | Endpoints |
+|---|---|---|---|---|
+| US-01 | Must | Back | Demandes d'inscription, validation admin, authentification (token + refresh), rôles de base (fournisseur, association, admin), seed admin, e-mail de décision | `POST /registration-requests`<br>`GET /admin/registration-requests`<br>`POST /admin/registration-requests/{id}/approve`<br>`POST /admin/registration-requests/{id}/reject`<br>`POST /auth/login`<br>`POST /auth/refresh`<br>`POST /auth/logout`<br>`GET /me` |
+| US-01 | Must | Web | Formulaire de demande fournisseur, connexion, page admin minimale des demandes | `POST /registration-requests`<br>`POST /auth/login`<br>`POST /auth/refresh`<br>`GET /me`<br>`GET /admin/registration-requests`<br>`POST /admin/registration-requests/{id}/approve`<br>`POST /admin/registration-requests/{id}/reject` |
+| US-01 | Must | Mobile | Formulaire de demande association, connexion, session persistante | `POST /registration-requests`<br>`POST /auth/login`<br>`POST /auth/refresh`<br>`GET /me` |
+| US-02 | Must | Back | Création d'un lot avec validations (quantité, DLC, créneau, allergènes), lot divisible ou non | `POST /lots` |
+| US-02 | Must | Web | Formulaire de publication d'un lot | `POST /lots` |
+| US-03 | Must | Back | Recherche géographique des fournisseurs ayant des lots disponibles, fiche fournisseur, détail d'un lot | `GET /suppliers?lat&lng&radius&page`<br>`GET /suppliers/{id}`<br>`GET /suppliers/{id}/lots`<br>`GET /lots/{id}` |
+| US-03 | Must | Mobile | Liste des fournisseurs triée par distance, fiche fournisseur, fiche lot | `GET /suppliers`<br>`GET /suppliers/{id}`<br>`GET /suppliers/{id}/lots`<br>`GET /lots/{id}` |
+| US-04 | Must | Back | Réservation (quantité, heure de passage) sans surréservation, génération du code de collecte, lots et réservations du fournisseur | `POST /lots/{id}/reservations`<br>`GET /me/reservations`<br>`GET /reservations/{id}`<br>`GET /me/lots`<br>`GET /lots/{id}/reservations` |
+| US-04 | Must | Mobile | Bouton « Réserver » (quantité, heure), écran « Mes réservations » avec code, QR code et statut | `POST /lots/{id}/reservations`<br>`GET /me/reservations`<br>`GET /reservations/{id}` |
+| US-04 | Must | Web | Liste des lots en cours du fournisseur avec leurs réservations | `GET /me/lots`<br>`GET /lots/{id}/reservations` |
+| US-05 | Must | Back | Vérification du code, passage en « collectée », limitation des tentatives | `POST /reservations/{id}/confirm` |
+| US-05 | Must | Web | Saisie du code de collecte sur une réservation | `POST /reservations/{id}/confirm` |
+| US-06 | Should | Back | Modification du compte et de l'organisation, changement de mot de passe, retour en validation si le SIRET ou le RNA change | `PATCH /me`<br>`PUT /me/password`<br>`GET /me/organization`<br>`PATCH /me/organization` |
+| US-06 | Should | Web | Page « Profil » du fournisseur | `GET /me`<br>`PATCH /me`<br>`PUT /me/password`<br>`GET /me/organization`<br>`PATCH /me/organization` |
+| US-06 | Should | Mobile | Page « Profil » de l'association | `GET /me`<br>`PATCH /me`<br>`PUT /me/password`<br>`GET /me/organization`<br>`PATCH /me/organization` |
+| US-07 | Should | Back | Rôles responsable et membre, vérification des droits sur tous les endpoints, invitations | `GET /me/organization/members`<br>`POST /me/organization/invitations`<br>`POST /invitations/{token}/accept`<br>`PATCH /me/organization/members/{userId}`<br>`DELETE /me/organization/members/{userId}` |
+| US-07 | Should | Web | Page « Membres », acceptation d'une invitation, actions interdites masquées | `GET /me/organization/members`<br>`POST /me/organization/invitations`<br>`POST /invitations/{token}/accept`<br>`PATCH /me/organization/members/{userId}`<br>`DELETE /me/organization/members/{userId}` |
+| US-07 | Should | Mobile | Page « Membres », acceptation d'une invitation, actions interdites masquées | `GET /me/organization/members`<br>`POST /me/organization/invitations`<br>`POST /invitations/{token}/accept`<br>`PATCH /me/organization/members/{userId}`<br>`DELETE /me/organization/members/{userId}` |
+| US-08 | Should | Back | Gestion des organisations (liste, fiche, modification, suspension), modération des lots, consultation des réservations | `GET /admin/organizations`<br>`GET /admin/organizations/{id}`<br>`PATCH /admin/organizations/{id}`<br>`POST /admin/organizations/{id}/suspend`<br>`POST /admin/organizations/{id}/reactivate`<br>`GET /admin/lots`<br>`POST /admin/lots/{id}/withdraw`<br>`GET /admin/reservations` |
+| US-08 | Should | Web | Écrans du back-office, avec le traitement des demandes d'inscription (US-01) intégré | Tous les endpoints `/admin/...` |
+| US-09 | Should | Back | Filtres (statut, période) et pagination sur les lots et les réservations | `GET /me/lots?status&from&to&page`<br>`GET /me/reservations?status&from&to&page` |
+| US-09 | Should | Web | Écran « Historique » du fournisseur | `GET /me/lots`<br>`GET /lots/{id}/reservations` |
+| US-09 | Should | Mobile | Écran « Historique » de l'association | `GET /me/reservations` |
+| US-10 | Should | Back | Annulation, quantité rendue au lot, code invalidé | `POST /reservations/{id}/cancel` |
+| US-10 | Should | Mobile | Bouton « Annuler » dans « Mes réservations » | `POST /reservations/{id}/cancel` |
+| US-11 | Could | Back | Messages rattachés à une réservation, accès limité aux deux organisations, flux temps réel | `GET /reservations/{id}/messages`<br>`POST /reservations/{id}/messages`<br>`GET /reservations/{id}/messages/stream` (SSE) |
+| US-11 | Could | Web | Fil de messages sur une réservation | `GET /reservations/{id}/messages`<br>`POST /reservations/{id}/messages`<br>`GET /reservations/{id}/messages/stream` |
+| US-11 | Could | Mobile | Fil de messages sur une réservation | `GET /reservations/{id}/messages`<br>`POST /reservations/{id}/messages`<br>`GET /reservations/{id}/messages/stream` |
+| US-12 | Could | Back | Paramètres de filtre sur la recherche | `GET /suppliers?category&excludeAllergens&supplierType&storage&pickupFrom&pickupTo`<br>`GET /suppliers/{id}/lots` (mêmes filtres) |
+| US-12 | Could | Mobile | Écran de filtres de la recherche | `GET /suppliers`<br>`GET /suppliers/{id}/lots` |
+| US-13 | Could | Back | Génération asynchrone d'un export CSV ou PDF | `POST /me/exports`<br>`GET /me/exports/{id}`<br>`GET /me/exports/{id}/file` |
+| US-13 | Could | Web | Bouton d'export, suivi de la génération, téléchargement | `POST /me/exports`<br>`GET /me/exports/{id}`<br>`GET /me/exports/{id}/file` |
+
 ## Carte des dépendances
 
 Une flèche **A → B** signifie que **B ne peut pas être terminée avant A**. Une flèche en pointillés indique une dépendance partielle : seule une partie de B attend A.
