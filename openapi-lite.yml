@@ -1,0 +1,991 @@
+openapi: 3.0.3
+info:
+    title: Gaspirator API (lite)
+    version: 0.1.0
+    description: |
+        Version lite du contrat de Gaspirator : uniquement les user stories **Must**
+        (US-01 à US-05). Le contrat complet est dans `openapi.yml`.
+
+        - **Authentification** : token Bearer obtenu avec `POST /auth/login`. Les routes
+          publiques déclarent `security: []`.
+        - **Rôles** : `admin` (plateforme) et `manager` (responsable d'une organisation). Le
+          type de l'organisation (`supplier` ou `association`) détermine les actions possibles.
+        - **Préfixes** : `/me/...` désigne l'utilisateur connecté et son organisation,
+          `/admin/...` est réservé aux admins.
+        - **Formats** : propriétés en snake_case, dates et heures en ISO 8601 (UTC).
+        - **Pagination** : paramètres `page` et `per_page`, réponse `{ data, meta }`.
+        - **Erreurs** : toujours au format `Error`, avec des messages en français.
+servers:
+    - url: http://localhost:8080/api/v1
+      description: Local
+security:
+    - bearerAuth: []
+tags:
+    - name: Auth
+      description: Connexion et session (US-01)
+    - name: Registration
+      description: Demandes d'inscription des organisations (US-01)
+    - name: Lots
+      description: Lots publiés par les fournisseurs (US-02, US-04)
+    - name: Suppliers
+      description: Recherche de fournisseurs par les associations (US-03)
+    - name: Reservations
+      description: Réservation et confirmation de la réception (US-04, US-05)
+    - name: Admin
+      description: Traitement des demandes d'inscription (US-01)
+
+paths:
+    # ---------- US-01 · Inscription et connexion ----------
+    /registration-requests:
+        post:
+            tags: [Registration]
+            summary: Envoyer une demande d'inscription
+            description: |
+                US-01. Crée une demande au statut `pending` pour une organisation et le compte
+                de son responsable. L'adresse est géocodée à l'envoi. Le compte ne peut pas se
+                connecter tant que la demande n'est pas acceptée par un admin.
+
+                409 si le SIRET, le n° RNA ou l'e-mail est déjà utilisé. 422 si un champ est
+                mal formé ou si l'adresse est introuvable.
+            operationId: createRegistrationRequest
+            security: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema: { $ref: "#/components/schemas/RegistrationRequestCreate" }
+            responses:
+                "201":
+                    description: Demande créée
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/RegistrationRequest" }
+                "400": { $ref: "#/components/responses/BadRequest" }
+                "409": { $ref: "#/components/responses/Conflict" }
+                "422": { $ref: "#/components/responses/ValidationError" }
+
+    /auth/login:
+        post:
+            tags: [Auth]
+            summary: Se connecter
+            description: |
+                US-01. 401 avec un message générique si l'e-mail ou le mot de passe est
+                incorrect (on ne révèle pas si l'e-mail existe). 403 si les identifiants sont
+                corrects mais que la demande d'inscription est en attente ou refusée.
+            operationId: login
+            security: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema: { $ref: "#/components/schemas/LoginRequest" }
+            responses:
+                "200":
+                    description: Connecté
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/AuthTokens" }
+                "400": { $ref: "#/components/responses/BadRequest" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+                "422": { $ref: "#/components/responses/ValidationError" }
+
+    /auth/refresh:
+        post:
+            tags: [Auth]
+            summary: Renouveler le token d'accès
+            description: |
+                US-01. Appelé automatiquement par le client HTTP quand le token d'accès expire.
+                Le refresh token envoyé est invalidé et remplacé.
+            operationId: refreshToken
+            security: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema: { $ref: "#/components/schemas/RefreshRequest" }
+            responses:
+                "200":
+                    description: Nouveaux tokens
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/AuthTokens" }
+                "400": { $ref: "#/components/responses/BadRequest" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+
+    /auth/logout:
+        post:
+            tags: [Auth]
+            summary: Se déconnecter
+            description: US-01. Révoque le refresh token.
+            operationId: logout
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema: { $ref: "#/components/schemas/RefreshRequest" }
+            responses:
+                "204": { description: Déconnecté }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+
+    /me:
+        get:
+            tags: [Auth]
+            summary: Récupérer l'utilisateur connecté
+            description: |
+                US-01. Utilisé au démarrage des applications pour savoir sur quel espace envoyer
+                l'utilisateur, selon son rôle et le type de son organisation.
+            operationId: getMe
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/Me" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+
+    /admin/registration-requests:
+        get:
+            tags: [Admin]
+            summary: Lister les demandes d'inscription en attente
+            description: US-01. Page admin minimale. Renvoie les demandes au statut `pending`.
+            operationId: listRegistrationRequests
+            parameters:
+                - $ref: "#/components/parameters/Page"
+                - $ref: "#/components/parameters/PerPage"
+            responses:
+                "200":
+                    description: Liste paginée
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/RegistrationRequestPage" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+
+    /admin/registration-requests/{requestId}/approve:
+        parameters:
+            - $ref: "#/components/parameters/RequestId"
+        post:
+            tags: [Admin]
+            summary: Accepter une demande d'inscription
+            description: |
+                US-01. Crée l'organisation et active le compte du responsable, qui est prévenu
+                par e-mail. 409 si la demande a déjà été traitée.
+            operationId: approveRegistrationRequest
+            responses:
+                "200":
+                    description: Demande acceptée
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/RegistrationRequest" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+                "404": { $ref: "#/components/responses/NotFound" }
+                "409": { $ref: "#/components/responses/Conflict" }
+
+    /admin/registration-requests/{requestId}/reject:
+        parameters:
+            - $ref: "#/components/parameters/RequestId"
+        post:
+            tags: [Admin]
+            summary: Refuser une demande d'inscription
+            description: |
+                US-01. Le demandeur est prévenu par e-mail. 409 si la demande a déjà été
+                traitée.
+            operationId: rejectRegistrationRequest
+            responses:
+                "200":
+                    description: Demande refusée
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/RegistrationRequest" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+                "404": { $ref: "#/components/responses/NotFound" }
+                "409": { $ref: "#/components/responses/Conflict" }
+
+    # ---------- US-02 · Publier un lot ----------
+    /lots:
+        post:
+            tags: [Lots]
+            summary: Publier un lot
+            description: |
+                US-02. Réservé aux fournisseurs. Le lot est créé au statut `available`.
+
+                422 si la quantité est nulle ou négative, si la DLC est passée, si le créneau
+                se termine avant de commencer ou après la fin du jour de la DLC.
+            operationId: createLot
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema: { $ref: "#/components/schemas/LotCreate" }
+            responses:
+                "201":
+                    description: Lot publié
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/Lot" }
+                "400": { $ref: "#/components/responses/BadRequest" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+                "422": { $ref: "#/components/responses/ValidationError" }
+
+    # ---------- US-03 · Rechercher des fournisseurs ----------
+    /suppliers:
+        get:
+            tags: [Suppliers]
+            summary: Rechercher des fournisseurs autour de moi
+            description: |
+                US-03. Réservé aux associations. Renvoie les fournisseurs qui ont au moins un
+                lot disponible, triés par distance. Sans `latitude` et `longitude`, la position
+                de l'association connectée est utilisée.
+            operationId: searchSuppliers
+            parameters:
+                - $ref: "#/components/parameters/Latitude"
+                - $ref: "#/components/parameters/Longitude"
+                - $ref: "#/components/parameters/RadiusKm"
+                - $ref: "#/components/parameters/Page"
+                - $ref: "#/components/parameters/PerPage"
+            responses:
+                "200":
+                    description: Liste paginée
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/SupplierSearchPage" }
+                "400": { $ref: "#/components/responses/BadRequest" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+
+    /suppliers/{supplierId}:
+        parameters:
+            - $ref: "#/components/parameters/SupplierId"
+        get:
+            tags: [Suppliers]
+            summary: Récupérer la fiche d'un fournisseur
+            description: US-03.
+            operationId: getSupplier
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/Supplier" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "404": { $ref: "#/components/responses/NotFound" }
+
+    /suppliers/{supplierId}/lots:
+        parameters:
+            - $ref: "#/components/parameters/SupplierId"
+        get:
+            tags: [Suppliers]
+            summary: Lister les lots disponibles d'un fournisseur
+            description: |
+                US-03. Ne renvoie que les lots disponibles : quantité restante, créneau non
+                terminé et DLC non dépassée.
+            operationId: listSupplierLots
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/LotList" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "404": { $ref: "#/components/responses/NotFound" }
+
+    /lots/{lotId}:
+        parameters:
+            - $ref: "#/components/parameters/LotId"
+        get:
+            tags: [Lots]
+            summary: Récupérer un lot
+            description: |
+                US-03, US-04. Accessible aux associations et au fournisseur qui a publié le lot.
+            operationId: getLot
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/Lot" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+                "404": { $ref: "#/components/responses/NotFound" }
+
+    # ---------- US-04 · Réserver un lot ----------
+    /lots/{lotId}/reservations:
+        parameters:
+            - $ref: "#/components/parameters/LotId"
+        get:
+            tags: [Reservations]
+            summary: Lister les réservations d'un lot
+            description: |
+                US-04. Réservé au fournisseur qui a publié le lot. Les codes de collecte ne sont
+                pas renvoyés.
+            operationId: listLotReservations
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/ReservationList" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+                "404": { $ref: "#/components/responses/NotFound" }
+        post:
+            tags: [Reservations]
+            summary: Réserver un lot
+            description: |
+                US-04. Réservé aux associations. Pour un lot divisible, l'association choisit une
+                quantité ; pour un lot indivisible, la réservation porte sur tout le lot.
+                L'heure de passage doit être comprise dans le créneau de collecte. Un code de
+                collecte unique est généré.
+
+                Le back garantit qu'il n'y a jamais de surréservation, même pour des requêtes
+                simultanées. 409 si le lot n'est plus disponible (entièrement réservé ou expiré)
+                ou si la quantité restante est devenue insuffisante. 422 si la quantité ou
+                l'heure de passage est invalide.
+            operationId: createReservation
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema: { $ref: "#/components/schemas/ReservationCreate" }
+            responses:
+                "201":
+                    description: Lot réservé
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/Reservation" }
+                "400": { $ref: "#/components/responses/BadRequest" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+                "404": { $ref: "#/components/responses/NotFound" }
+                "409": { $ref: "#/components/responses/Conflict" }
+                "422": { $ref: "#/components/responses/ValidationError" }
+
+    /me/lots:
+        get:
+            tags: [Lots]
+            summary: Lister mes lots
+            description: |
+                US-04. Réservé aux fournisseurs, pour voir leurs lots et qui les a réservés.
+                Triés du plus récent au plus ancien.
+            operationId: listMyLots
+            parameters:
+                - $ref: "#/components/parameters/Page"
+                - $ref: "#/components/parameters/PerPage"
+            responses:
+                "200":
+                    description: Liste paginée
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/LotPage" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+
+    /me/reservations:
+        get:
+            tags: [Reservations]
+            summary: Lister mes réservations
+            description: |
+                US-04. Réservé aux associations. Triées de la plus récente à la plus ancienne,
+                avec leur code de collecte.
+            operationId: listMyReservations
+            parameters:
+                - $ref: "#/components/parameters/Page"
+                - $ref: "#/components/parameters/PerPage"
+            responses:
+                "200":
+                    description: Liste paginée
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/ReservationPage" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+
+    /reservations/{reservationId}:
+        parameters:
+            - $ref: "#/components/parameters/ReservationId"
+        get:
+            tags: [Reservations]
+            summary: Récupérer une réservation
+            description: |
+                US-04. Accessible à l'association qui a réservé (avec le code de collecte) et au
+                fournisseur du lot (sans le code).
+            operationId: getReservation
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/Reservation" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+                "404": { $ref: "#/components/responses/NotFound" }
+
+    # ---------- US-05 · Confirmer la réception ----------
+    /reservations/{reservationId}/confirm:
+        parameters:
+            - $ref: "#/components/parameters/ReservationId"
+        post:
+            tags: [Reservations]
+            summary: Confirmer la réception avec le code de collecte
+            description: |
+                US-05. Réservé au fournisseur du lot. Un bon code passe la réservation au statut
+                `collected` et horodate la remise.
+
+                422 si le code est incorrect (rien n'est modifié). Après 5 codes incorrects, la
+                confirmation de cette réservation est bloquée 15 minutes (429). 409 si la
+                réservation est déjà collectée.
+            operationId: confirmReservation
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema: { $ref: "#/components/schemas/PickupConfirmation" }
+            responses:
+                "200":
+                    description: Réception confirmée
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/Reservation" }
+                "400": { $ref: "#/components/responses/BadRequest" }
+                "401": { $ref: "#/components/responses/Unauthorized" }
+                "403": { $ref: "#/components/responses/Forbidden" }
+                "404": { $ref: "#/components/responses/NotFound" }
+                "409": { $ref: "#/components/responses/Conflict" }
+                "422": { $ref: "#/components/responses/ValidationError" }
+                "429": { $ref: "#/components/responses/TooManyRequests" }
+
+components:
+    securitySchemes:
+        bearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+
+    parameters:
+        LotId:
+            name: lotId
+            in: path
+            required: true
+            schema: { type: integer, format: int64 }
+        ReservationId:
+            name: reservationId
+            in: path
+            required: true
+            schema: { type: integer, format: int64 }
+        SupplierId:
+            name: supplierId
+            in: path
+            required: true
+            schema: { type: integer, format: int64 }
+        RequestId:
+            name: requestId
+            in: path
+            required: true
+            schema: { type: integer, format: int64 }
+        Page:
+            name: page
+            in: query
+            schema: { type: integer, minimum: 1, default: 1 }
+        PerPage:
+            name: per_page
+            in: query
+            schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        Latitude:
+            name: latitude
+            in: query
+            description: Par défaut, la latitude de l'association connectée
+            schema: { type: number, format: double, minimum: -90, maximum: 90 }
+        Longitude:
+            name: longitude
+            in: query
+            description: Par défaut, la longitude de l'association connectée
+            schema: { type: number, format: double, minimum: -180, maximum: 180 }
+        RadiusKm:
+            name: radius_km
+            in: query
+            description: Rayon de recherche en kilomètres
+            schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+
+    schemas:
+        # ----- Énumérations -----
+        OrganizationType:
+            type: string
+            enum: [supplier, association]
+        SupplierType:
+            type: string
+            description: Type d'établissement d'un fournisseur
+            enum: [canteen, hospital, supermarket, other]
+        RegistrationStatus:
+            type: string
+            enum: [pending, approved, rejected]
+        UserRole:
+            type: string
+            description: "`admin` : admin de la plateforme. `manager` : responsable d'une organisation."
+            enum: [admin, manager]
+        LotCategory:
+            type: string
+            description: Catégories alimentaires uniquement (les dons non alimentaires sont hors périmètre)
+            enum:
+                - fresh_produce
+                - dairy
+                - meat_fish
+                - bakery
+                - prepared_meal
+                - dry_goods
+                - beverages
+                - other_food
+        Allergen:
+            type: string
+            description: Les 14 allergènes à déclaration obligatoire
+            enum:
+                - gluten
+                - crustaceans
+                - eggs
+                - fish
+                - peanuts
+                - soybeans
+                - milk
+                - nuts
+                - celery
+                - mustard
+                - sesame
+                - sulphites
+                - lupin
+                - molluscs
+        Storage:
+            type: string
+            description: Conditions de conservation
+            enum: [ambient, refrigerated, frozen]
+        QuantityUnit:
+            type: string
+            enum: [portions, kg, pieces]
+        LotStatus:
+            type: string
+            description: |
+                Calculé par le back. `available` : quantité restante, créneau non terminé et DLC
+                non dépassée. `reserved` : toute la quantité est réservée. `collected` : toutes
+                les réservations ont été collectées. `expired` : créneau terminé ou DLC dépassée
+                alors qu'il restait une quantité non réservée.
+            enum: [available, reserved, collected, expired]
+        ReservationStatus:
+            type: string
+            description: "`booked` : à venir. `collected` : remise confirmée par le fournisseur."
+            enum: [booked, collected]
+
+        # ----- Objets communs -----
+        Address:
+            type: object
+            required: [street, postal_code, city]
+            additionalProperties: false
+            properties:
+                street: { type: string, minLength: 3, maxLength: 255, example: "12 rue de la République" }
+                postal_code: { type: string, pattern: '^\d{5}$', example: "69002" }
+                city: { type: string, minLength: 1, maxLength: 120, example: Lyon }
+
+        GeoPoint:
+            type: object
+            required: [latitude, longitude]
+            properties:
+                latitude: { type: number, format: double, readOnly: true, example: 45.7578 }
+                longitude: { type: number, format: double, readOnly: true, example: 4.8320 }
+
+        # ----- Organisations -----
+        OrganizationCreate:
+            type: object
+            required: [type, name, legal_id, address, contact_phone]
+            additionalProperties: false
+            properties:
+                type: { $ref: "#/components/schemas/OrganizationType" }
+                name: { type: string, minLength: 2, maxLength: 255, example: "Cantine du lycée Ampère" }
+                legal_id:
+                    type: string
+                    description: SIRET (14 chiffres) pour un fournisseur, n° RNA (W suivi de 9 chiffres) pour une association
+                    pattern: '^(\d{14}|W\d{9})$'
+                    example: "19690103400017"
+                supplier_type:
+                    type: string
+                    allOf:
+                        - $ref: "#/components/schemas/SupplierType"
+                    nullable: true
+                    description: Obligatoire pour un fournisseur, null pour une association
+                address: { $ref: "#/components/schemas/Address" }
+                contact_phone: { type: string, minLength: 10, maxLength: 20, example: "04 78 00 00 00" }
+
+        OrganizationSummary:
+            type: object
+            description: Informations d'une organisation visibles par les autres organisations
+            required: [id, type, name, supplier_type, address, location, contact_phone]
+            properties:
+                id: { type: integer, format: int64, readOnly: true, example: 3 }
+                type: { $ref: "#/components/schemas/OrganizationType" }
+                name: { type: string, example: "Cantine du lycée Ampère" }
+                supplier_type:
+                    type: string
+                    allOf:
+                        - $ref: "#/components/schemas/SupplierType"
+                    nullable: true
+                address: { $ref: "#/components/schemas/Address" }
+                location: { $ref: "#/components/schemas/GeoPoint" }
+                contact_phone: { type: string, example: "04 78 00 00 00" }
+
+        Organization:
+            allOf:
+                - $ref: "#/components/schemas/OrganizationSummary"
+                - type: object
+                  required: [legal_id, created_at]
+                  properties:
+                      legal_id: { type: string, example: "19690103400017" }
+                      created_at: { type: string, format: date-time, readOnly: true }
+
+        Supplier:
+            allOf:
+                - $ref: "#/components/schemas/OrganizationSummary"
+                - type: object
+                  required: [available_lots_count]
+                  properties:
+                      available_lots_count: { type: integer, minimum: 0, readOnly: true, example: 2 }
+
+        SupplierSearchResult:
+            allOf:
+                - $ref: "#/components/schemas/OrganizationSummary"
+                - type: object
+                  required: [distance_km, available_lots_count]
+                  properties:
+                      distance_km: { type: number, format: double, readOnly: true, example: 1.8 }
+                      available_lots_count: { type: integer, minimum: 1, readOnly: true, example: 2 }
+
+        # ----- Inscription -----
+        AccountCreate:
+            type: object
+            required: [firstname, lastname, email, password]
+            additionalProperties: false
+            properties:
+                firstname: { type: string, minLength: 1, maxLength: 255, example: Marie }
+                lastname: { type: string, minLength: 1, maxLength: 255, example: Dupont }
+                email: { type: string, format: email, maxLength: 255, example: marie.dupont@example.org }
+                password: { type: string, format: password, minLength: 8, maxLength: 128, writeOnly: true }
+
+        AccountSummary:
+            type: object
+            required: [firstname, lastname, email]
+            properties:
+                firstname: { type: string, example: Marie }
+                lastname: { type: string, example: Dupont }
+                email: { type: string, format: email, example: marie.dupont@example.org }
+
+        RegistrationRequestCreate:
+            type: object
+            required: [organization, account]
+            additionalProperties: false
+            properties:
+                organization: { $ref: "#/components/schemas/OrganizationCreate" }
+                account:
+                    allOf:
+                        - $ref: "#/components/schemas/AccountCreate"
+                    description: Compte du responsable de l'organisation
+
+        RegistrationRequest:
+            type: object
+            required: [id, status, organization, account, organization_id, created_at, decided_at]
+            properties:
+                id: { type: integer, format: int64, readOnly: true, example: 18 }
+                status: { $ref: "#/components/schemas/RegistrationStatus" }
+                organization: { $ref: "#/components/schemas/OrganizationCreate" }
+                account: { $ref: "#/components/schemas/AccountSummary" }
+                organization_id:
+                    type: integer
+                    format: int64
+                    nullable: true
+                    readOnly: true
+                    description: Organisation créée à l'acceptation, null sinon
+                created_at: { type: string, format: date-time, readOnly: true }
+                decided_at: { type: string, format: date-time, nullable: true, readOnly: true }
+
+        # ----- Authentification -----
+        LoginRequest:
+            type: object
+            required: [email, password]
+            additionalProperties: false
+            properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password, writeOnly: true }
+
+        RefreshRequest:
+            type: object
+            required: [refresh_token]
+            additionalProperties: false
+            properties:
+                refresh_token: { type: string }
+
+        AuthTokens:
+            type: object
+            required: [access_token, refresh_token, token_type, expires_in]
+            properties:
+                access_token: { type: string }
+                refresh_token: { type: string }
+                token_type: { type: string, enum: [Bearer] }
+                expires_in: { type: integer, description: Durée de validité du token d'accès en secondes, example: 900 }
+
+        Me:
+            type: object
+            required: [id, email, firstname, lastname, role, organization]
+            properties:
+                id: { type: integer, format: int64, readOnly: true, example: 5 }
+                email: { type: string, format: email, example: marie.dupont@example.org }
+                firstname: { type: string, example: Marie }
+                lastname: { type: string, example: Dupont }
+                role: { $ref: "#/components/schemas/UserRole" }
+                organization:
+                    type: object
+                    allOf:
+                        - $ref: "#/components/schemas/Organization"
+                    nullable: true
+                    description: Null pour un admin de la plateforme
+
+        # ----- Lots -----
+        LotCreate:
+            type: object
+            required: [title, category, quantity, unit, use_by_date, storage, pickup_start, pickup_end]
+            additionalProperties: false
+            properties:
+                title: { type: string, minLength: 3, maxLength: 120, example: "Hachis parmentier" }
+                category: { $ref: "#/components/schemas/LotCategory" }
+                quantity: { type: number, minimum: 0, exclusiveMinimum: true, example: 30 }
+                unit: { $ref: "#/components/schemas/QuantityUnit" }
+                divisible:
+                    type: boolean
+                    default: true
+                    description: Si false, une réservation porte obligatoirement sur tout le lot
+                use_by_date:
+                    type: string
+                    format: date
+                    description: Date limite de consommation (DLC), aujourd'hui ou plus tard
+                    example: "2026-11-04"
+                allergens:
+                    type: array
+                    uniqueItems: true
+                    default: []
+                    items: { $ref: "#/components/schemas/Allergen" }
+                storage: { $ref: "#/components/schemas/Storage" }
+                pickup_start: { type: string, format: date-time, example: "2026-11-03T13:00:00Z" }
+                pickup_end:
+                    type: string
+                    format: date-time
+                    description: Après `pickup_start` et au plus tard à la fin du jour de la DLC
+                    example: "2026-11-03T15:00:00Z"
+
+        Lot:
+            type: object
+            required:
+                [id, supplier, title, category, quantity, remaining_quantity, unit, divisible, use_by_date, allergens, storage, pickup_start, pickup_end, status, created_at]
+            properties:
+                id: { type: integer, format: int64, readOnly: true, example: 41 }
+                supplier: { $ref: "#/components/schemas/OrganizationSummary" }
+                title: { type: string, example: "Hachis parmentier" }
+                category: { $ref: "#/components/schemas/LotCategory" }
+                quantity: { type: number, example: 30 }
+                remaining_quantity:
+                    type: number
+                    minimum: 0
+                    readOnly: true
+                    description: Quantité encore réservable
+                    example: 18
+                unit: { $ref: "#/components/schemas/QuantityUnit" }
+                divisible: { type: boolean }
+                use_by_date: { type: string, format: date, example: "2026-11-04" }
+                allergens:
+                    type: array
+                    items: { $ref: "#/components/schemas/Allergen" }
+                storage: { $ref: "#/components/schemas/Storage" }
+                pickup_start: { type: string, format: date-time, example: "2026-11-03T13:00:00Z" }
+                pickup_end: { type: string, format: date-time, example: "2026-11-03T15:00:00Z" }
+                status: { $ref: "#/components/schemas/LotStatus" }
+                created_at: { type: string, format: date-time, readOnly: true }
+
+        LotSummary:
+            type: object
+            description: Lot tel qu'il apparaît dans une réservation
+            required: [id, title, unit, divisible, use_by_date, storage, pickup_start, pickup_end, supplier]
+            properties:
+                id: { type: integer, format: int64, example: 41 }
+                title: { type: string, example: "Hachis parmentier" }
+                unit: { $ref: "#/components/schemas/QuantityUnit" }
+                divisible: { type: boolean }
+                use_by_date: { type: string, format: date, example: "2026-11-04" }
+                storage: { $ref: "#/components/schemas/Storage" }
+                pickup_start: { type: string, format: date-time }
+                pickup_end: { type: string, format: date-time }
+                supplier: { $ref: "#/components/schemas/OrganizationSummary" }
+
+        LotList:
+            type: object
+            required: [data]
+            properties:
+                data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Lot" }
+
+        # ----- Réservations -----
+        ReservationCreate:
+            type: object
+            required: [pickup_at]
+            additionalProperties: false
+            properties:
+                quantity:
+                    type: number
+                    minimum: 0
+                    exclusiveMinimum: true
+                    description: |
+                        Obligatoire pour un lot divisible, inférieure ou égale à la quantité
+                        restante. À omettre pour un lot indivisible : la réservation porte alors
+                        sur tout le lot (422 si une autre quantité est envoyée).
+                    example: 12
+                pickup_at:
+                    type: string
+                    format: date-time
+                    description: Heure de passage, comprise dans le créneau de collecte du lot
+                    example: "2026-11-03T14:15:00Z"
+
+        Reservation:
+            type: object
+            required: [id, lot, association, quantity, pickup_at, status, created_at, collected_at]
+            properties:
+                id: { type: integer, format: int64, readOnly: true, example: 3 }
+                lot: { $ref: "#/components/schemas/LotSummary" }
+                association: { $ref: "#/components/schemas/OrganizationSummary" }
+                quantity: { type: number, example: 12 }
+                pickup_at: { type: string, format: date-time, example: "2026-11-03T14:15:00Z" }
+                status: { $ref: "#/components/schemas/ReservationStatus" }
+                pickup_code:
+                    type: string
+                    pattern: '^\d{6}$'
+                    readOnly: true
+                    description: |
+                        Code de collecte, renvoyé uniquement à l'association qui a réservé. L'app
+                        mobile l'affiche aussi sous forme de QR code, généré côté client.
+                    example: "482913"
+                created_at: { type: string, format: date-time, readOnly: true }
+                collected_at: { type: string, format: date-time, nullable: true, readOnly: true }
+
+        ReservationList:
+            type: object
+            required: [data]
+            properties:
+                data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Reservation" }
+
+        PickupConfirmation:
+            type: object
+            required: [pickup_code]
+            additionalProperties: false
+            properties:
+                pickup_code: { type: string, pattern: '^\d{6}$', example: "482913" }
+
+        # ----- Pagination -----
+        PageMeta:
+            type: object
+            required: [page, per_page, total]
+            properties:
+                page: { type: integer }
+                per_page: { type: integer }
+                total: { type: integer }
+
+        LotPage:
+            type: object
+            required: [data, meta]
+            properties:
+                data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Lot" }
+                meta: { $ref: "#/components/schemas/PageMeta" }
+
+        ReservationPage:
+            type: object
+            required: [data, meta]
+            properties:
+                data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Reservation" }
+                meta: { $ref: "#/components/schemas/PageMeta" }
+
+        SupplierSearchPage:
+            type: object
+            required: [data, meta]
+            properties:
+                data:
+                    type: array
+                    items: { $ref: "#/components/schemas/SupplierSearchResult" }
+                meta: { $ref: "#/components/schemas/PageMeta" }
+
+        RegistrationRequestPage:
+            type: object
+            required: [data, meta]
+            properties:
+                data:
+                    type: array
+                    items: { $ref: "#/components/schemas/RegistrationRequest" }
+                meta: { $ref: "#/components/schemas/PageMeta" }
+
+        # ----- Erreurs -----
+        Error:
+            type: object
+            required: [code, message]
+            properties:
+                code:
+                    type: string
+                    enum: [bad_request, unauthorized, forbidden, not_found, validation_error, conflict, too_many_requests]
+                message: { type: string, example: "Ce lot vient d'être réservé par une autre association." }
+                details:
+                    type: array
+                    items:
+                        type: object
+                        required: [field, message]
+                        properties:
+                            field: { type: string, example: quantity }
+                            message: { type: string, example: "doit être inférieure ou égale à la quantité restante" }
+
+    responses:
+        BadRequest:
+            description: Requête malformée (JSON invalide, paramètre incorrect)
+            content:
+                application/json:
+                    schema: { $ref: "#/components/schemas/Error" }
+        Unauthorized:
+            description: Token absent, invalide ou expiré, ou identifiants incorrects
+            content:
+                application/json:
+                    schema: { $ref: "#/components/schemas/Error" }
+        Forbidden:
+            description: Action interdite pour ce rôle, ce type d'organisation ou cette ressource
+            content:
+                application/json:
+                    schema: { $ref: "#/components/schemas/Error" }
+        NotFound:
+            description: Ressource introuvable
+            content:
+                application/json:
+                    schema: { $ref: "#/components/schemas/Error" }
+        Conflict:
+            description: Conflit avec l'état actuel de la ressource (le cas précis est décrit dans chaque opération)
+            content:
+                application/json:
+                    schema: { $ref: "#/components/schemas/Error" }
+        ValidationError:
+            description: Contraintes de validation non respectées
+            content:
+                application/json:
+                    schema: { $ref: "#/components/schemas/Error" }
+        TooManyRequests:
+            description: Trop de tentatives, réessayer plus tard
+            headers:
+                Retry-After:
+                    description: Nombre de secondes avant de pouvoir réessayer
+                    schema: { type: integer }
+            content:
+                application/json:
+                    schema: { $ref: "#/components/schemas/Error" }
