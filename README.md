@@ -26,6 +26,16 @@ Liens : [GitHub Project](https://github.com/users/Nathanmar/projects/3) · [Noti
 | [#12](https://github.com/Nathanmar/gaspirator/issues/12) | Filtrer les lots | Could | mobile |
 | [#13](https://github.com/Nathanmar/gaspirator/issues/13) | Exporter un récapitulatif des lots | Could | web |
 
+### Won't have
+
+Ces fonctionnalités sont volontairement hors du périmètre du projet.
+
+| Fonctionnalité | Pourquoi |
+|---|---|
+| Internationalisation (autres langues) | La plateforme vise des fournisseurs et des associations en France. L'interface, les e-mails et les messages d'erreur de l'API sont uniquement en français, et les dates et les nombres suivent le format français. |
+| Système de paiement | Les lots sont des dons gratuits. Il n'y a ni vente, ni abonnement, ni commission entre fournisseurs, associations et plateforme. |
+| Dons non alimentaires | Seules les denrées alimentaires peuvent être publiées. Les produits d'hygiène, les vêtements, le matériel et les autres dons non alimentaires sont exclus : les catégories de lot ne proposent que de l'alimentaire. |
+
 ## Carte des dépendances
 
 Chaque endpoint est mis en face des écrans qui l'appellent. Un endpoint peut servir à plusieurs écrans, et un écran peut appeler plusieurs endpoints. Les écrans du back-office (BO) font partie du front web.
