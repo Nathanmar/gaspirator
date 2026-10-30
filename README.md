@@ -1,12 +1,12 @@
 # Gaspirator
 
-Plateforme de mise en relation entre des **fournisseurs** de denrées alimentaires (cantines, hôpitaux, supermarchés…) et des **associations**, pour donner les surplus au lieu de les jeter.
+A platform that connects food **suppliers** (canteens, hospitals, supermarkets…) with **charities**, so surplus food is donated instead of thrown away.
 
-- **Front web** : fournisseurs et back-office admin
-- **App mobile** : associations
-- **Back** + **base de données**
+- **Web front end**: suppliers and admin back office
+- **Mobile app**: charities
+- **Back end** + **database**
 
-Liens : [GitHub Project](https://github.com/users/Nathanmar/projects/3) · [Notion](https://app.notion.com/p/Projet-409243b4cee0809bb06ee2814d7a2789)
+Links: [GitHub Project](https://github.com/users/Nathanmar/projects/3) · [Notion](https://app.notion.com/p/Projet-409243b4cee0809bb06ee2814d7a2789)
 
 ## Applications and resources
 
@@ -60,80 +60,80 @@ Cross-language clients communicate over HTTP. Framework-specific clients such as
 
 ## Backlog (MoSCoW)
 
-| Issue                                                    | User story                                               | Priorité | Client                   |
-| -------------------------------------------------------- | -------------------------------------------------------- | -------- | ------------------------ |
-| [#1](https://github.com/Nathanmar/gaspirator/issues/1)   | Inscription et connexion via une demande                 | Must     | web, mobile, back-office |
-| [#2](https://github.com/Nathanmar/gaspirator/issues/2)   | Publier un lot                                           | Must     | web                      |
-| [#3](https://github.com/Nathanmar/gaspirator/issues/3)   | Rechercher des fournisseurs autour de moi                | Must     | mobile                   |
-| [#4](https://github.com/Nathanmar/gaspirator/issues/4)   | Réserver un lot                                          | Must     | mobile                   |
-| [#5](https://github.com/Nathanmar/gaspirator/issues/5)   | Confirmer la réception d'un lot                          | Must     | web                      |
-| [#6](https://github.com/Nathanmar/gaspirator/issues/6)   | Gérer mon profil                                         | Should   | web, mobile              |
-| [#7](https://github.com/Nathanmar/gaspirator/issues/7)   | Gérer les rôles et les droits (RBAC)                     | Should   | web, mobile, back-office |
-| [#8](https://github.com/Nathanmar/gaspirator/issues/8)   | Gérer les fournisseurs et les associations (back-office) | Should   | back-office              |
-| [#9](https://github.com/Nathanmar/gaspirator/issues/9)   | Consulter l'historique des lots et des réservations      | Should   | web, mobile              |
-| [#10](https://github.com/Nathanmar/gaspirator/issues/10) | Annuler une réservation                                  | Should   | mobile                   |
-| [#11](https://github.com/Nathanmar/gaspirator/issues/11) | Messagerie                                               | Could    | web, mobile              |
-| [#12](https://github.com/Nathanmar/gaspirator/issues/12) | Filtrer les lots                                         | Could    | mobile                   |
-| [#13](https://github.com/Nathanmar/gaspirator/issues/13) | Exporter un récapitulatif des lots                       | Could    | web                      |
-| /                                                        | Internationalisation                                     | Wont     | /                        |
-| /                                                        | Paiement                                                 | Wont     | /                        |
-| /                                                        | Produits non-alimentaires                                | Wont     | /                        |
+| Issue                                                    | User story                                   | Priority | Client                   |
+| -------------------------------------------------------- | -------------------------------------------- | -------- | ------------------------ |
+| [#1](https://github.com/Nathanmar/gaspirator/issues/1)   | Sign up and log in via a request             | Must     | web, mobile, back-office |
+| [#2](https://github.com/Nathanmar/gaspirator/issues/2)   | Publish a donation                           | Must     | web                      |
+| [#3](https://github.com/Nathanmar/gaspirator/issues/3)   | Search for suppliers near me                 | Must     | mobile                   |
+| [#4](https://github.com/Nathanmar/gaspirator/issues/4)   | Reserve a donation                           | Must     | mobile                   |
+| [#5](https://github.com/Nathanmar/gaspirator/issues/5)   | Confirm receipt of a donation                | Must     | web                      |
+| [#6](https://github.com/Nathanmar/gaspirator/issues/6)   | Manage my profile                            | Should   | web, mobile              |
+| [#7](https://github.com/Nathanmar/gaspirator/issues/7)   | Manage roles and permissions (RBAC)          | Should   | web, mobile, back-office |
+| [#8](https://github.com/Nathanmar/gaspirator/issues/8)   | Manage suppliers and charities (back office) | Should   | back-office              |
+| [#9](https://github.com/Nathanmar/gaspirator/issues/9)   | View donation and reservation history        | Should   | web, mobile              |
+| [#10](https://github.com/Nathanmar/gaspirator/issues/10) | Cancel a reservation                         | Should   | mobile                   |
+| [#11](https://github.com/Nathanmar/gaspirator/issues/11) | Messaging                                    | Could    | web, mobile              |
+| [#12](https://github.com/Nathanmar/gaspirator/issues/12) | Filter donations                             | Could    | mobile                   |
+| [#13](https://github.com/Nathanmar/gaspirator/issues/13) | Export a donation summary                    | Could    | web                      |
+| /                                                        | Internationalization                         | Won't    | /                        |
+| /                                                        | Payment                                      | Won't    | /                        |
+| /                                                        | Non-food products                            | Won't    | /                        |
 
-## Carte des dépendances
+## Dependency map
 
-Chaque endpoint est mis en face des écrans qui l'appellent. Un endpoint peut servir à plusieurs écrans, et un écran peut appeler plusieurs endpoints. Les écrans du back-office (BO) font partie du front web.
+Each endpoint is listed next to the screens that call it. An endpoint can serve several screens, and a screen can call several endpoints. Back-office (BO) screens are part of the web front end.
 
-| Endpoint                                         | Écrans                                                                                         | US           |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------- | ------------ |
-| `POST /registration-requests`                    | Web · Demande d'inscription<br>Mobile · Demande d'inscription                                  | US-01        |
-| `GET /admin/registration-requests`               | BO · Demandes d'inscription                                                                    | US-01        |
-| `POST /admin/registration-requests/{id}/approve` | BO · Demandes d'inscription                                                                    | US-01        |
-| `POST /admin/registration-requests/{id}/reject`  | BO · Demandes d'inscription                                                                    | US-01        |
-| `POST /auth/login`                               | Web · Connexion<br>Mobile · Connexion                                                          | US-01        |
-| `POST /auth/refresh`                             | _Aucun écran_ (voir plus bas)                                                                  | US-01        |
-| `POST /auth/logout`                              | Web · Profil<br>Mobile · Profil                                                                | US-01        |
-| `GET /me`                                        | Web · Connexion<br>Web · Profil<br>Mobile · Démarrage<br>Mobile · Connexion<br>Mobile · Profil | US-01, US-06 |
-| `POST /lots`                                     | Web · Publier un lot                                                                           | US-02        |
-| `GET /suppliers`                                 | Mobile · Recherche de fournisseurs                                                             | US-03, US-12 |
-| `GET /suppliers/{id}`                            | Mobile · Fiche fournisseur                                                                     | US-03        |
-| `GET /suppliers/{id}/lots`                       | Mobile · Fiche fournisseur                                                                     | US-03, US-12 |
-| `GET /lots/{id}`                                 | Mobile · Fiche lot<br>Web · Détail d'un lot                                                    | US-03, US-04 |
-| `POST /lots/{id}/reservations`                   | Mobile · Réserver un lot                                                                       | US-04        |
-| `GET /me/reservations`                           | Mobile · Mes réservations<br>Mobile · Historique                                               | US-04, US-09 |
-| `GET /reservations/{id}`                         | Mobile · Code de collecte                                                                      | US-04        |
-| `GET /me/lots`                                   | Web · Mes lots<br>Web · Historique                                                             | US-04, US-09 |
-| `GET /lots/{id}/reservations`                    | Web · Détail d'un lot<br>Web · Historique                                                      | US-04, US-09 |
-| `POST /reservations/{id}/confirm`                | Web · Saisie du code de collecte                                                               | US-05        |
-| `PATCH /me`                                      | Web · Profil<br>Mobile · Profil                                                                | US-06        |
-| `PUT /me/password`                               | Web · Profil<br>Mobile · Profil                                                                | US-06        |
-| `GET /me/organization`                           | Web · Profil<br>Mobile · Profil                                                                | US-06        |
-| `PATCH /me/organization`                         | Web · Profil<br>Mobile · Profil                                                                | US-06        |
-| `GET /me/organization/members`                   | Web · Membres<br>Mobile · Membres                                                              | US-07        |
-| `POST /me/organization/invitations`              | Web · Membres<br>Mobile · Membres                                                              | US-07        |
-| `POST /invitations/{token}/accept`               | Web · Acceptation d'une invitation<br>Mobile · Acceptation d'une invitation                    | US-07        |
-| `PATCH /me/organization/members/{userId}`        | Web · Membres<br>Mobile · Membres                                                              | US-07        |
-| `DELETE /me/organization/members/{userId}`       | Web · Membres<br>Mobile · Membres                                                              | US-07        |
-| `GET /admin/organizations`                       | BO · Organisations                                                                             | US-08        |
-| `GET /admin/organizations/{id}`                  | BO · Fiche organisation                                                                        | US-08        |
-| `PATCH /admin/organizations/{id}`                | BO · Fiche organisation                                                                        | US-08        |
-| `POST /admin/organizations/{id}/suspend`         | BO · Fiche organisation                                                                        | US-08        |
-| `POST /admin/organizations/{id}/reactivate`      | BO · Fiche organisation                                                                        | US-08        |
-| `GET /admin/lots`                                | BO · Lots                                                                                      | US-08        |
-| `POST /admin/lots/{id}/withdraw`                 | BO · Lots                                                                                      | US-08        |
-| `GET /admin/reservations`                        | BO · Réservations                                                                              | US-08        |
-| `POST /reservations/{id}/cancel`                 | Mobile · Mes réservations                                                                      | US-10        |
-| `GET /reservations/{id}/messages`                | Web · Messagerie<br>Mobile · Messagerie                                                        | US-11        |
-| `POST /reservations/{id}/messages`               | Web · Messagerie<br>Mobile · Messagerie                                                        | US-11        |
-| `GET /reservations/{id}/messages/stream`         | Web · Messagerie<br>Mobile · Messagerie                                                        | US-11        |
-| `POST /me/exports`                               | Web · Export                                                                                   | US-13        |
-| `GET /me/exports/{id}`                           | Web · Export                                                                                   | US-13        |
-| `GET /me/exports/{id}/file`                      | Web · Export                                                                                   | US-13        |
+| Endpoint                                         | Screens                                                                                | US           |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------- | ------------ |
+| `POST /registration-requests`                    | Web · Registration request<br>Mobile · Registration request                            | US-01        |
+| `GET /admin/registration-requests`               | BO · Registration requests                                                             | US-01        |
+| `POST /admin/registration-requests/{id}/approve` | BO · Registration requests                                                             | US-01        |
+| `POST /admin/registration-requests/{id}/reject`  | BO · Registration requests                                                             | US-01        |
+| `POST /auth/login`                               | Web · Login<br>Mobile · Login                                                          | US-01        |
+| `POST /auth/refresh`                             | _No screen_ (see below)                                                                | US-01        |
+| `POST /auth/logout`                              | Web · Profile<br>Mobile · Profile                                                      | US-01        |
+| `GET /me`                                        | Web · Login<br>Web · Profile<br>Mobile · Startup<br>Mobile · Login<br>Mobile · Profile | US-01, US-06 |
+| `POST /donations`                                | Web · Publish a donation                                                               | US-02        |
+| `GET /suppliers`                                 | Mobile · Supplier search                                                               | US-03, US-12 |
+| `GET /suppliers/{id}`                            | Mobile · Supplier page                                                                 | US-03        |
+| `GET /suppliers/{id}/donations`                  | Mobile · Supplier page                                                                 | US-03, US-12 |
+| `GET /donations/{id}`                            | Mobile · Donation page<br>Web · Donation details                                       | US-03, US-04 |
+| `POST /donations/{id}/reservations`              | Mobile · Reserve a donation                                                            | US-04        |
+| `GET /me/reservations`                           | Mobile · My reservations<br>Mobile · History                                           | US-04, US-09 |
+| `GET /reservations/{id}`                         | Mobile · Pickup code                                                                   | US-04        |
+| `GET /me/donations`                              | Web · My donations<br>Web · History                                                    | US-04, US-09 |
+| `GET /donations/{id}/reservations`               | Web · Donation details<br>Web · History                                                | US-04, US-09 |
+| `POST /reservations/{id}/confirm`                | Web · Pickup code entry                                                                | US-05        |
+| `PATCH /me`                                      | Web · Profile<br>Mobile · Profile                                                      | US-06        |
+| `PUT /me/password`                               | Web · Profile<br>Mobile · Profile                                                      | US-06        |
+| `GET /me/organization`                           | Web · Profile<br>Mobile · Profile                                                      | US-06        |
+| `PATCH /me/organization`                         | Web · Profile<br>Mobile · Profile                                                      | US-06        |
+| `GET /me/organization/members`                   | Web · Members<br>Mobile · Members                                                      | US-07        |
+| `POST /me/organization/invitations`              | Web · Members<br>Mobile · Members                                                      | US-07        |
+| `POST /invitations/{token}/accept`               | Web · Accept an invitation<br>Mobile · Accept an invitation                            | US-07        |
+| `PATCH /me/organization/members/{userId}`        | Web · Members<br>Mobile · Members                                                      | US-07        |
+| `DELETE /me/organization/members/{userId}`       | Web · Members<br>Mobile · Members                                                      | US-07        |
+| `GET /admin/organizations`                       | BO · Organizations                                                                     | US-08        |
+| `GET /admin/organizations/{id}`                  | BO · Organization page                                                                 | US-08        |
+| `PATCH /admin/organizations/{id}`                | BO · Organization page                                                                 | US-08        |
+| `POST /admin/organizations/{id}/suspend`         | BO · Organization page                                                                 | US-08        |
+| `POST /admin/organizations/{id}/reactivate`      | BO · Organization page                                                                 | US-08        |
+| `GET /admin/donations`                           | BO · Donations                                                                         | US-08        |
+| `POST /admin/donations/{id}/withdraw`            | BO · Donations                                                                         | US-08        |
+| `GET /admin/reservations`                        | BO · Reservations                                                                      | US-08        |
+| `POST /reservations/{id}/cancel`                 | Mobile · My reservations                                                               | US-10        |
+| `GET /reservations/{id}/messages`                | Web · Messaging<br>Mobile · Messaging                                                  | US-11        |
+| `POST /reservations/{id}/messages`               | Web · Messaging<br>Mobile · Messaging                                                  | US-11        |
+| `GET /reservations/{id}/messages/stream`         | Web · Messaging<br>Mobile · Messaging                                                  | US-11        |
+| `POST /me/exports`                               | Web · Export                                                                           | US-13        |
+| `GET /me/exports/{id}`                           | Web · Export                                                                           | US-13        |
+| `GET /me/exports/{id}/file`                      | Web · Export                                                                           | US-13        |
 
-#### Endpoint sans écran
+#### Endpoint without a screen
 
-- **`POST /auth/refresh`** : aucun écran ne l'appelle directement. Quand le token d'accès expire, le client HTTP du web et du mobile appelle cet endpoint automatiquement, puis rejoue la requête qui a échoué. L'utilisateur ne voit rien.
+- **`POST /auth/refresh`**: no screen calls it directly. When the access token expires, the web and mobile HTTP clients call this endpoint automatically, then replay the request that failed. The user sees nothing.
 
-#### Écrans sans endpoint
+#### Screens without an endpoint
 
-- **Web · Demande envoyée** et **Mobile · Demande envoyée** : page de confirmation affichée après l'envoi de la demande d'inscription. Elle réutilise la réponse de `POST /registration-requests`. L'organisation n'a pas encore de compte, il n'y a donc rien d'autre à charger.
-- **Mobile · Filtres** (US-12) : l'écran construit seulement les paramètres de recherche, puis l'écran « Recherche de fournisseurs » rappelle `GET /suppliers` avec ces paramètres. Les choix proposés (catégories, allergènes, types de fournisseur) sont des listes fixées dans le contrat, pas des données à charger.
+- **Web · Request sent** and **Mobile · Request sent**: confirmation page shown after the registration request is submitted. It reuses the response from `POST /registration-requests`. The organization doesn't have an account yet, so there is nothing else to load.
+- **Mobile · Filters** (US-12): the screen only builds the search parameters, then the "Supplier search" screen calls `GET /suppliers` again with those parameters. The available options (categories, allergens, supplier types) are fixed lists defined in the contract, not data to load.
