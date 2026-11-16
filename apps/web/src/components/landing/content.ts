@@ -4,8 +4,8 @@ export const NAV_LINKS = [
   { href: "#acteurs", label: "Acteurs" },
 ] as const;
 
-// `role` uses the `OrganizationType` values of the API contract so the login page can open on the
-// right audience and pass it on to the registration form.
+// `role` uses the words of the API contract (`supplier`, `association`) so the login page can open
+// on the right audience and pass it on to the registration form.
 export const JOIN_LINKS = [
   { href: "/login?role=supplier", label: "Je suis fournisseur", tone: "lime" },
   { href: "/login?role=association", label: "Je suis une association", tone: "tomato" },

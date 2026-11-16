@@ -1,34 +1,53 @@
 import { apiRequest } from "@/lib/api-client";
 
-/** `OrganizationType` in the API contract. */
+/**
+ * Whether a user registers (or manages) a supplier or an association. Front-only: the contract has
+ * one schema per kind, e.g. `SupplierCreate` and `AssociationCreate`.
+ */
 export type OrganizationType = "supplier" | "association";
 
 /** `SupplierType` in the API contract: kind of establishment of a supplier. */
 export type SupplierType = "canteen" | "hospital" | "supermarket" | "other";
 
-/** `RegistrationRequestCreate` in the API contract. */
-export type RegistrationRequestCreate = {
-  organization: {
-    type: OrganizationType;
-    name: string;
-    // SIRET (14 digits) for a supplier, RNA number (W + 9 digits) for an association.
-    legal_id: string;
-    // Required for a supplier, null for an association.
-    supplier_type: SupplierType | null;
-    address: { street: string; postal_code: string; city: string };
-    contact_phone: string;
-  };
-  account: { firstname: string; lastname: string; email: string; password: string };
+type Address = { street: string; postal_code: string; city: string };
+
+/** `SupplierCreate` in the API contract. */
+export type SupplierCreate = {
+  name: string;
+  // SIRET: 14 digits.
+  legal_id: string;
+  supplier_type: SupplierType;
+  address: Address;
+  contact_phone: string;
 };
 
-/** `RegistrationRequest` in the API contract. */
+/** `AssociationCreate` in the API contract. */
+export type AssociationCreate = {
+  name: string;
+  // RNA number: W followed by 9 digits.
+  legal_id: string;
+  address: Address;
+  contact_phone: string;
+};
+
+/** `AccountCreate` in the API contract: the manager's account. */
+type AccountCreate = { firstname: string; lastname: string; email: string; password: string };
+
+/** `RegistrationRequestCreate` in the API contract: a supplier or an association, and its manager. */
+export type RegistrationRequestCreate =
+  | { supplier: SupplierCreate; account: AccountCreate }
+  | { association: AssociationCreate; account: AccountCreate };
+
+/** `RegistrationRequest` in the API contract. Either `supplier` or `association` is filled. */
 export type RegistrationRequest = {
   id: number;
   status: "pending" | "approved" | "rejected";
-  organization: RegistrationRequestCreate["organization"];
+  supplier: SupplierCreate | null;
+  association: AssociationCreate | null;
   account: { firstname: string; lastname: string; email: string };
-  // Organization created once the request is approved, null until then.
-  organization_id: number | null;
+  // Supplier or association created once the request is approved, null until then.
+  supplier_id: number | null;
+  association_id: number | null;
   created_at: string;
   decided_at: string | null;
 };
@@ -57,7 +76,8 @@ export function login(credentials: LoginRequest): Promise<AuthTokens> {
 }
 
 /**
- * `POST /registration-requests`: creates a `pending` request for an organization and its manager.
+ * `POST /registration-requests`: creates a `pending` request for a supplier or an association and
+ * its manager.
  * A 409 means the e-mail, SIRET or RNA number is already used; a 422 a malformed field or an
  * address that cannot be found.
  */

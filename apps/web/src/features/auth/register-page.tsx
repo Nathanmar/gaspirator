@@ -7,7 +7,6 @@ import { errorMessage } from "@/lib/api-client";
 
 import {
   type OrganizationType,
-  type RegistrationRequest,
   type RegistrationRequestCreate,
   createRegistrationRequest,
 } from "./auth-api";
@@ -22,26 +21,37 @@ const REGISTER_ERRORS = {
   422: "Certaines informations ont été refusées. Vérifiez notamment que l'adresse existe.",
 };
 
+type SentRequest = { role: OrganizationType; name: string; email: string };
+
+// The confirmation repeats what was sent rather than reading the response: the mock server answers
+// every request with the same fixed example.
+function summarize(payload: RegistrationRequestCreate): SentRequest {
+  const role = "supplier" in payload ? "supplier" : "association";
+  const organization = "supplier" in payload ? payload.supplier : payload.association;
+  return { role, name: organization.name, email: payload.account.email };
+}
+
 export function RegisterPage({ role }: { role?: OrganizationType }) {
   const [error, setError] = useState<string | null>(null);
-  const [request, setRequest] = useState<RegistrationRequest | null>(null);
+  const [sent, setSent] = useState<SentRequest | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     // The confirmation replaces a long form: bring its title into view and announce it.
-    if (request) titleRef.current?.focus();
-  }, [request]);
+    if (sent) titleRef.current?.focus();
+  }, [sent]);
 
   async function handleSubmit(payload: RegistrationRequestCreate) {
     setError(null);
     try {
-      setRequest(await createRegistrationRequest(payload));
+      await createRegistrationRequest(payload);
+      setSent(summarize(payload));
     } catch (failure) {
       setError(errorMessage(failure, REGISTER_ERRORS));
     }
   }
 
-  if (request) {
+  if (sent) {
     return (
       <AuthLayout
         eyebrow="Inscription"
@@ -52,12 +62,12 @@ export function RegisterPage({ role }: { role?: OrganizationType }) {
         <div className="flex flex-col gap-6">
           <p className="leading-snug">
             Un administrateur va vérifier les informations de{" "}
-            <strong>{request.organization.name}</strong>. Vous pourrez vous connecter avec{" "}
-            <strong>{request.account.email}</strong> dès que la demande sera acceptée.
+            <strong>{sent.name}</strong>. Vous pourrez vous connecter avec{" "}
+            <strong>{sent.email}</strong> dès que la demande sera acceptée.
           </p>
           <Link
             to="/login"
-            search={{ role: request.organization.type }}
+            search={{ role: sent.role }}
             className={primaryButtonClass}
           >
             Aller à la connexion

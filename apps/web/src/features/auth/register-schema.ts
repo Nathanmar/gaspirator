@@ -79,8 +79,9 @@ export const organizationSchema = z.discriminatedUnion(
       legal_id: legalId.pipe(
         z.string().regex(/^W\d{9}$/, "Le n° RNA doit commencer par W, suivi de 9 chiffres."),
       ),
-      // Whatever was picked before switching to "association", the contract expects null.
-      supplier_type: z.union([z.enum(SUPPLIER_TYPES), z.literal("")]).transform(() => null),
+      // An association has no establishment type: whatever was picked before switching to
+      // "association" is accepted here and left out of the request.
+      supplier_type: z.union([z.enum(SUPPLIER_TYPES), z.literal("")]),
     }),
   ],
   { error: "Choisissez le type de votre organisation." },
@@ -117,18 +118,26 @@ export const accountSchema = z
   });
 
 /**
- * Registration form validation. Its output is the `RegistrationRequestCreate` body of the API.
+ * Registration form validation. Its output is the `RegistrationRequestCreate` body of the API:
+ * `{ supplier, account }` or `{ association, account }`, without the password confirmation.
  */
 export const registerSchema = z
   .object({ organization: organizationSchema, account: accountSchema })
-  .transform(
-    ({ organization, account }): RegistrationRequestCreate => ({
-      organization,
-      account: {
-        firstname: account.firstname,
-        lastname: account.lastname,
-        email: account.email,
-        password: account.password,
-      },
-    }),
-  );
+  .transform(({ organization, account }): RegistrationRequestCreate => {
+    const manager = {
+      firstname: account.firstname,
+      lastname: account.lastname,
+      email: account.email,
+      password: account.password,
+    };
+    const fields = {
+      name: organization.name,
+      legal_id: organization.legal_id,
+      address: organization.address,
+      contact_phone: organization.contact_phone,
+    };
+
+    return organization.type === "supplier"
+      ? { supplier: { ...fields, supplier_type: organization.supplier_type }, account: manager }
+      : { association: fields, account: manager };
+  });
