@@ -3,11 +3,17 @@
 import os
 from datetime import UTC, datetime, timedelta
 
+import bcrypt
 from jose import JWTError, jwt
 
 SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+
+def hash_password(password: str) -> str:
+    """Hash a password with bcrypt (bcrypt only uses the first 72 bytes)."""
+    return bcrypt.hashpw(password.encode()[:72], bcrypt.gensalt()).decode()
 
 
 def create_access_token(data: dict[str, object], expires_delta: timedelta | None = None) -> str:
