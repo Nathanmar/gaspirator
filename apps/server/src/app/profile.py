@@ -6,7 +6,18 @@ from app.auth import hash_password, verify_password
 from app.dependencies import CurrentUser, Organizations, Users
 from app.errors import ApiError
 from app.repositories import OrganizationRepository, StoredUser
-from app.schemas import Error, ErrorDetail, Me, MeUpdate, Organization, PasswordChange
+from app.schemas import (
+    Error,
+    ErrorDetail,
+    Me,
+    MeUpdate,
+    Organization,
+    OrganizationStatus,
+    OrganizationType,
+    OrganizationUpdate,
+    PasswordChange,
+    UserRole,
+)
 
 router = APIRouter(tags=["Profile"])
 
@@ -14,6 +25,7 @@ _UNAUTHORIZED = {401: {"model": Error, "description": "Token absent, invalide ou
 _BAD_REQUEST = {400: {"model": Error, "description": "Requête malformée"}}
 _VALIDATION = {422: {"model": Error, "description": "Contraintes de validation non respectées"}}
 _NOT_FOUND = {404: {"model": Error, "description": "Ressource introuvable"}}
+_FORBIDDEN = {403: {"model": Error, "description": "Réservé au responsable (manager)"}}
 
 
 def _conflict(description: str) -> dict:
@@ -108,3 +120,47 @@ async def _my_organization(user: StoredUser, organizations: OrganizationReposito
 async def get_my_organization(user: CurrentUser, organizations: Organizations) -> Organization:
     """Récupérer mon organisation."""
     return await _my_organization(user, organizations)
+
+
+@router.patch(
+    "/me/organization",
+    response_model=Organization,
+    operation_id="updateMyOrganization",
+    responses={
+        **_BAD_REQUEST,
+        **_UNAUTHORIZED,
+        **_FORBIDDEN,
+        **_conflict("Le SIRET ou le n° RNA est déjà utilisé"),
+        **_VALIDATION,
+    },
+)
+async def update_my_organization(
+    payload: OrganizationUpdate, user: CurrentUser, organizations: Organizations
+) -> Organization:
+    """Modifier mon organisation (réservé au responsable)."""
+    if user.role != UserRole.MANAGER:
+        raise ApiError(403, "forbidden", "Seul le responsable peut modifier l'organisation.")
+
+    organization = await _my_organization(user, organizations)
+    changes = payload.model_dump(exclude_unset=True)
+
+    if "supplier_type" in changes and organization.type == OrganizationType.ASSOCIATION:
+        raise ApiError(
+            422,
+            "validation_error",
+            "Certains champs sont invalides.",
+            details=[
+                ErrorDetail(field="supplier_type", message="doit être null pour une association")
+            ],
+        )
+
+    new_legal_id = changes.get("legal_id")
+    if new_legal_id is not None and new_legal_id != organization.legal_id:
+        if await organizations.get_by_legal_id(new_legal_id) is not None:
+            raise ApiError(409, "conflict", "Ce SIRET ou ce n° RNA est déjà utilisé.")
+        # A new SIRET / RNA must be validated again by an admin.
+        changes["status"] = OrganizationStatus.PENDING_REVIEW
+
+    # TODO(geocoding): a new address should also update `location` once geocoding exists.
+    updated = Organization.model_validate({**organization.model_dump(), **changes})
+    return await organizations.update(updated)
