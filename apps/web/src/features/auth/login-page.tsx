@@ -4,7 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { FormAlert } from "@/components/form-controls";
-import { ApiError, NetworkError } from "@/lib/api-client";
+import { errorMessage } from "@/lib/api-client";
 
 import { type OrganizationType, login } from "./auth-api";
 import { AuthLayout } from "./auth-layout";
@@ -17,22 +17,12 @@ const SPACE_BY_ROLE: Record<OrganizationType, string> = {
   association: "Espace association",
 };
 
-/**
- * Message shown for a failed login. 401 and 403 get our own text: the contract makes the 401
- * message deliberately vague, and the mock server returns the same example body for every error.
- */
-function loginErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.status === 401) return "E-mail ou mot de passe incorrect.";
-    if (error.status === 403) {
-      return "Votre compte n'est pas encore actif : votre demande d'inscription est en attente de validation ou a été refusée.";
-    }
-    return error.message;
-  }
-  if (error instanceof NetworkError) return error.message;
-  // Anything else is a bug: let it surface instead of hiding it behind a message.
-  throw error;
-}
+// Our own texts for 401 and 403: the contract makes the 401 message deliberately vague, and the mock
+// server returns the same example body for every error.
+const LOGIN_ERRORS = {
+  401: "E-mail ou mot de passe incorrect.",
+  403: "Votre compte n'est pas encore actif : votre demande d'inscription est en attente de validation ou a été refusée.",
+};
 
 export function LoginPage({ role }: { role?: OrganizationType }) {
   const navigate = useNavigate();
@@ -44,7 +34,7 @@ export function LoginPage({ role }: { role?: OrganizationType }) {
     try {
       setTokens(await login(credentials));
     } catch (failure) {
-      setError(loginErrorMessage(failure));
+      setError(errorMessage(failure, LOGIN_ERRORS));
       return;
     }
     toast.success("Vous êtes connecté.");
@@ -59,11 +49,7 @@ export function LoginPage({ role }: { role?: OrganizationType }) {
       footer={
         <>
           Pas encore de compte ?{" "}
-          <Link
-            to="/register"
-            search={{ role }}
-            className="font-semibold text-cream underline underline-offset-4"
-          >
+          <Link to="/register" search={{ role }}>
             Créer un compte
           </Link>
         </>

@@ -1,6 +1,7 @@
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 
-import { SubmitButton, TextField } from "@/components/form-controls";
+import { BoundTextField } from "@/components/bound-fields";
+import { SubmitButton } from "@/components/form-controls";
 
 import { type LoginFormValues, loginSchema } from "./login-schema";
 
@@ -35,17 +36,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
     >
       {FIELDS.map(({ name, ...input }) => (
         <form.Field key={name} name={name}>
-          {(field) => (
-            <TextField
-              id={name}
-              name={name}
-              {...input}
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(e) => field.handleChange(e.target.value)}
-              error={field.state.meta.errors[0]?.message}
-            />
-          )}
+          {(field) => <BoundTextField field={field} {...input} />}
         </form.Field>
       ))}
 

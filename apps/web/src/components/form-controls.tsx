@@ -168,17 +168,24 @@ export function SubmitButton({
   return (
     <button type="submit" disabled={pending} className={cn(primaryButtonClass, className)}>
       {pending && pendingLabel ? pendingLabel : children}
-      <span
-        aria-hidden="true"
-        className="grid size-10 place-items-center rounded-full bg-ink text-cream transition-transform duration-300 group-hover:rotate-45 group-disabled:rotate-0"
-      >
-        {pending ? (
-          <LoaderCircle className="size-4 animate-spin" />
-        ) : (
-          <ArrowUpRight className="size-4" />
-        )}
-      </span>
+      <ArrowBadge pending={pending} />
     </button>
+  );
+}
+
+/** Round arrow at the end of a primary button or link; it turns on hover, spins while pending. */
+export function ArrowBadge({ pending = false }: { pending?: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="grid size-10 place-items-center rounded-full bg-ink text-cream transition-transform duration-300 group-hover:rotate-45 group-disabled:rotate-0"
+    >
+      {pending ? (
+        <LoaderCircle className="size-4 animate-spin" />
+      ) : (
+        <ArrowUpRight className="size-4" />
+      )}
+    </span>
   );
 }
 

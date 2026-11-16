@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight } from "lucide-react";
 
-import { primaryButtonClass } from "@/components/form-controls";
-import { ApiError, NetworkError } from "@/lib/api-client";
+import { ArrowBadge, primaryButtonClass } from "@/components/form-controls";
+import { errorMessage } from "@/lib/api-client";
 
 import {
   type OrganizationType,
@@ -15,27 +14,13 @@ import {
 import { AuthLayout } from "./auth-layout";
 import { RegisterForm } from "./register-form";
 
-/**
- * Message shown for a failed registration. 409 and 422 get our own text, which does not depend on
- * the server message (the mock server returns the same example body for every error).
- */
-function registerErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.status === 409) {
-      return "Un compte existe déjà avec cette adresse e-mail, ce SIRET ou ce n° RNA.";
-    }
-    if (error.status === 422) {
-      // The form already checks every format: a 422 mostly means the address was not found.
-      return "Certaines informations ont été refusées. Vérifiez notamment que l'adresse existe.";
-    }
-    return error.message;
-  }
-  if (error instanceof NetworkError) return error.message;
-  // Anything else is a bug: let it surface instead of hiding it behind a message.
-  throw error;
-}
-
-const linkClass = "font-semibold text-cream underline underline-offset-4";
+// Our own texts for 409 and 422, independent of the server message (the mock server returns the
+// same example body for every error).
+const REGISTER_ERRORS = {
+  409: "Un compte existe déjà avec cette adresse e-mail, ce SIRET ou ce n° RNA.",
+  // The form already checks every format: a 422 mostly means the address was not found.
+  422: "Certaines informations ont été refusées. Vérifiez notamment que l'adresse existe.",
+};
 
 export function RegisterPage({ role }: { role?: OrganizationType }) {
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +37,7 @@ export function RegisterPage({ role }: { role?: OrganizationType }) {
     try {
       setRequest(await createRegistrationRequest(payload));
     } catch (failure) {
-      setError(registerErrorMessage(failure));
+      setError(errorMessage(failure, REGISTER_ERRORS));
     }
   }
 
@@ -76,12 +61,7 @@ export function RegisterPage({ role }: { role?: OrganizationType }) {
             className={primaryButtonClass}
           >
             Aller à la connexion
-            <span
-              aria-hidden="true"
-              className="grid size-10 place-items-center rounded-full bg-ink text-cream transition-transform duration-300 group-hover:rotate-45"
-            >
-              <ArrowUpRight className="size-4" />
-            </span>
+            <ArrowBadge />
           </Link>
         </div>
       </AuthLayout>
@@ -97,7 +77,7 @@ export function RegisterPage({ role }: { role?: OrganizationType }) {
       footer={
         <>
           Déjà un compte ?{" "}
-          <Link to="/login" search={{ role }} className={linkClass}>
+          <Link to="/login" search={{ role }}>
             Se connecter
           </Link>
         </>

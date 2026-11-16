@@ -1,15 +1,10 @@
-import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
-import { type AnyFieldApi, revalidateLogic, useForm, useStore } from "@tanstack/react-form";
+import { revalidateLogic, useForm, useStore } from "@tanstack/react-form";
 import { ArrowLeft } from "lucide-react";
 
-import {
-  ChoiceField,
-  FormAlert,
-  SelectField,
-  SubmitButton,
-  TextField,
-} from "@/components/form-controls";
+import { BoundTextField, firstError } from "@/components/bound-fields";
+import { ChoiceField, FormAlert, SelectField, SubmitButton } from "@/components/form-controls";
 import { cn } from "@/lib/utils";
 
 import type { OrganizationType, RegistrationRequestCreate, SupplierType } from "./auth-api";
@@ -54,32 +49,6 @@ function emptyValues(type: OrganizationType | ""): RegisterFormValues {
       contact_phone: "",
     },
   };
-}
-
-function firstError(field: AnyFieldApi): string | undefined {
-  return field.state.meta.errors[0]?.message;
-}
-
-/** Text input wired to a TanStack Form field. The id is prefixed with the step: `account-email`. */
-function BoundTextField({
-  field,
-  idPrefix,
-  ...props
-}: { field: AnyFieldApi; idPrefix: string; label: string } & Omit<
-  ComponentProps<typeof TextField>,
-  "id" | "name" | "value" | "onChange" | "onBlur" | "error"
->) {
-  return (
-    <TextField
-      id={`${idPrefix}-${field.name.replaceAll(".", "-")}`}
-      name={field.name}
-      value={field.state.value}
-      onBlur={field.handleBlur}
-      onChange={(e) => field.handleChange(e.target.value)}
-      error={firstError(field)}
-      {...props}
-    />
-  );
 }
 
 /** Progress bar, step number and title of a step. */
@@ -150,12 +119,22 @@ function AccountStep({ defaultValues, focusTitle, onContinue }: AccountStepProps
       <div className="grid gap-5 sm:grid-cols-2">
         <form.Field name="firstname">
           {(field) => (
-            <BoundTextField field={field} idPrefix="account" label="Prénom" autoComplete="given-name" />
+            <BoundTextField
+              field={field}
+              idPrefix="account"
+              label="Prénom"
+              autoComplete="given-name"
+            />
           )}
         </form.Field>
         <form.Field name="lastname">
           {(field) => (
-            <BoundTextField field={field} idPrefix="account" label="Nom" autoComplete="family-name" />
+            <BoundTextField
+              field={field}
+              idPrefix="account"
+              label="Nom"
+              autoComplete="family-name"
+            />
           )}
         </form.Field>
       </div>

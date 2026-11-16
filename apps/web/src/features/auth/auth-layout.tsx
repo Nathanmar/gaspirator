@@ -12,7 +12,7 @@ type AuthLayoutProps = {
   // Lets a page move the focus to the title, e.g. when a confirmation replaces a long form.
   titleRef?: Ref<HTMLHeadingElement>;
   description?: ReactNode;
-  // Under the card: link to the other auth page.
+  // Under the card: link to the other auth page, styled here.
   footer?: ReactNode;
   // The registration form needs more room than the login form.
   wide?: boolean;
@@ -64,7 +64,11 @@ export function AuthLayout({
 
           <div className="glass mt-8 rounded-[28px] p-5 sm:p-8">{children}</div>
 
-          {footer && <p className="mt-6 text-center text-sm text-cream/70">{footer}</p>}
+          {footer && (
+            <p className="mt-6 text-center text-sm text-cream/70 [&_a]:font-semibold [&_a]:text-cream [&_a]:underline [&_a]:underline-offset-4">
+              {footer}
+            </p>
+          )}
         </div>
       </main>
 

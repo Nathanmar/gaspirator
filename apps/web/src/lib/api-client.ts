@@ -93,3 +93,17 @@ async function readErrorBody(response: Response): Promise<ApiErrorBody | null> {
   const result = apiErrorBodySchema.safeParse(json);
   return result.success ? result.data : null;
 }
+
+/**
+ * Message to show the user for a failed API call. `messagesByStatus` replaces the server message
+ * for the given statuses, e.g. to stay generic on a 401. Anything that is neither an ApiError nor a
+ * NetworkError is a bug: it is rethrown instead of being hidden behind a message.
+ */
+export function errorMessage(
+  error: unknown,
+  messagesByStatus: Partial<Record<number, string>> = {},
+): string {
+  if (error instanceof ApiError) return messagesByStatus[error.status] ?? error.message;
+  if (error instanceof NetworkError) return error.message;
+  throw error;
+}
