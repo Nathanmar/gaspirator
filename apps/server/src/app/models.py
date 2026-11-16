@@ -31,28 +31,12 @@ def _str_enum(enum_cls: type, name: str) -> Enum:
     )
 
 
-class Organization(Base):
-    """A supplier or an association (contract schema `Organization`).
-
-    `address` and `location` of the contract are flattened into columns.
-    """
-
-    __tablename__ = "organizations"
-    __table_args__ = (
-        # Contract: `supplier_type` is required for a supplier, null for an association.
-        CheckConstraint(
-            "(type = 'supplier' AND supplier_type IS NOT NULL)"
-            " OR (type = 'association' AND supplier_type IS NULL)",
-            name="supplier_type_matches_type",
-        ),
-    )
+class _ManagedEntity:
+    """Columns shared by suppliers and associations (contract `SupplierSummary` /
+    `AssociationSummary`): `address` and `location` are flattened into columns."""
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    type: Mapped[OrganizationType] = mapped_column(_str_enum(OrganizationType, "organization_type"))
     name: Mapped[str] = mapped_column(String(255))
-    supplier_type: Mapped[SupplierType | None] = mapped_column(
-        _str_enum(SupplierType, "supplier_type")
-    )
     # address
     street: Mapped[str] = mapped_column(String(255))
     postal_code: Mapped[str] = mapped_column(String(5))
@@ -61,15 +45,40 @@ class Organization(Base):
     latitude: Mapped[float] = mapped_column(Double)
     longitude: Mapped[float] = mapped_column(Double)
     contact_phone: Mapped[str] = mapped_column(String(20))
-    # SIRET (14 digits) or RNA number (W + 9 digits)
-    legal_id: Mapped[str] = mapped_column(String(14), unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    members: Mapped[list["User"]] = relationship(back_populates="organization")
+
+class Supplier(_ManagedEntity, Base):
+    """A food supplier (contract schema `Supplier`)."""
+
+    __tablename__ = "suppliers"
+    __table_args__ = (CheckConstraint(r"legal_id ~ '^\d{14}$'", name="legal_id_is_siret"),)
+
+    supplier_type: Mapped[SupplierType] = mapped_column(_str_enum(SupplierType, "supplier_type"))
+    # SIRET (14 digits)
+    legal_id: Mapped[str] = mapped_column(String(14), unique=True)
+
+    managers: Mapped[list["User"]] = relationship(back_populates="supplier")
+
+
+class Association(_ManagedEntity, Base):
+    """A charity (contract schema `Association`)."""
+
+    __tablename__ = "associations"
+    __table_args__ = (CheckConstraint(r"legal_id ~ '^W\d{9}$'", name="legal_id_is_rna"),)
+
+    # RNA number (W + 9 digits)
+    legal_id: Mapped[str] = mapped_column(String(10), unique=True)
+
+    managers: Mapped[list["User"]] = relationship(back_populates="association")
 
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        # A user manages a supplier or an association, not both (contract `Me`).
+        CheckConstraint("supplier_id IS NULL OR association_id IS NULL", name="manages_one_entity"),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     email: Mapped[str] = mapped_column(String(255))
@@ -77,11 +86,13 @@ class User(Base):
     firstname: Mapped[str] = mapped_column(String(255))
     lastname: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(_str_enum(UserRole, "user_role"))
-    # Null for a platform admin (contract `Me.organization`).
-    organization_id: Mapped[int | None] = mapped_column(ForeignKey("organizations.id"), index=True)
+    # Contract `Me.supplier` / `Me.association`: null if the user does not manage one.
+    supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"), index=True)
+    association_id: Mapped[int | None] = mapped_column(ForeignKey("associations.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    organization: Mapped[Organization | None] = relationship(back_populates="members")
+    supplier: Mapped[Supplier | None] = relationship(back_populates="managers")
+    association: Mapped[Association | None] = relationship(back_populates="managers")
 
     # The database deletes the request with its user (ON DELETE CASCADE).
     registration_request: Mapped["RegistrationRequest | None"] = relationship(
@@ -117,13 +128,12 @@ class RegistrationRequest(Base):
     city: Mapped[str] = mapped_column(String(120))
     contact_phone: Mapped[str] = mapped_column(String(20))
 
-    # Organisation created when an admin approves the request.
-    organization_id: Mapped[int | None] = mapped_column(ForeignKey("organizations.id"))
+    # Organisation created when an admin approves the request (no table yet).
+    organization_id: Mapped[int | None] = mapped_column(BigInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     user: Mapped[User] = relationship(back_populates="registration_request")
-    organization: Mapped[Organization | None] = relationship()
 
 
 class RefreshToken(Base):
