@@ -1,6 +1,6 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Hud } from "@/components/landing/hud";
 import { useAuthStore } from "@/features/auth/auth-store";
@@ -54,5 +54,17 @@ describe("Hud", () => {
 
     expect(await screen.findByRole("link", { name: "Rejoindre" })).toBeInTheDocument();
     expect(useAuthStore.getState().tokens).toBeNull();
+  });
+
+  it("sends a single logout request on a double tap", async () => {
+    useAuthStore.setState({ tokens });
+    // A logout that never answers, so the second tap happens while the first one is running.
+    const fetchMock = vi.fn<typeof fetch>().mockReturnValue(new Promise(() => {}));
+    globalThis.fetch = fetchMock;
+    renderWithRouter(<Hud />);
+
+    await userEvent.dblClick(await screen.findByRole("button", { name: "Se déconnecter" }));
+
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 });
