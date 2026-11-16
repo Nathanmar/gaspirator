@@ -1,4 +1,9 @@
-import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
+import {
+  HeadContent,
+  Outlet,
+  createRootRouteWithContext,
+  useRouterState,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import Header from "@/components/header";
@@ -26,11 +31,19 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
         rel: "icon",
         href: "/favicon.ico",
       },
+      {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: "/favicon.svg",
+      },
     ],
   }),
 });
 
 function RootComponent() {
+  // The landing page is full-bleed and brings its own navigation.
+  const isLanding = useRouterState({ select: (state) => state.location.pathname === "/" });
+
   return (
     <>
       <HeadContent />
@@ -41,10 +54,14 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <div className="grid grid-rows-[auto_1fr] h-svh">
-          <Header />
+        {isLanding ? (
           <Outlet />
-        </div>
+        ) : (
+          <div className="grid h-svh grid-rows-[auto_1fr]">
+            <Header />
+            <Outlet />
+          </div>
+        )}
         <Toaster richColors />
       </ThemeProvider>
 
