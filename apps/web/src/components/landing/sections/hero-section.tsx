@@ -1,3 +1,4 @@
+import { JoinButtons } from "../join-buttons";
 import { SplitChars } from "../split-text";
 
 // One centred column, read top to bottom: what it is, the name, the promise, then how.
@@ -11,7 +12,7 @@ export function HeroSection() {
       <div data-hero-inner className="flex max-w-4xl flex-col items-center text-center">
         <p
           data-hero-fade
-          className="text-sm font-semibold tracking-[0.12em] text-lime uppercase md:text-base"
+          className="flex items-center gap-3 text-sm font-bold tracking-[0.14em] text-cream uppercase [text-shadow:0_0_6px_var(--color-ink),0_0_14px_var(--color-ink)] before:h-0.5 before:w-8 before:bg-lime after:h-0.5 after:w-8 after:bg-lime md:text-base"
         >
           Plateforme anti-gaspillage alimentaire
         </p>
@@ -31,6 +32,7 @@ export function HeroSection() {
           Cantines, hôpitaux et supermarchés donnent leurs invendus aux associations proches,
           avant qu'ils ne finissent à la benne.
         </p>
+        <JoinButtons data-hero-fade className="mt-8" />
       </div>
     </section>
   );

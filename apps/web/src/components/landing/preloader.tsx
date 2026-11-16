@@ -21,6 +21,10 @@ export function Preloader() {
         <Skeleton className={`${block} mt-2 h-8 w-[min(90vw,36rem)] md:h-12`} />
         <Skeleton className={`${block} h-4 w-[min(85vw,30rem)]`} />
         <Skeleton className={`${block} h-4 w-[min(70vw,22rem)]`} />
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <Skeleton className={`${block} h-[52px] w-56 rounded-full`} />
+          <Skeleton className={`${block} h-[52px] w-64 rounded-full`} />
+        </div>
       </div>
     </div>
   );

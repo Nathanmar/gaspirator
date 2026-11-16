@@ -13,7 +13,6 @@ const GLOWS: [number, number, number][] = [
   [198, 244, 50],
   [239, 233, 220],
   [198, 244, 50],
-  [198, 244, 50],
 ];
 
 
@@ -197,21 +196,71 @@ export function useLandingMotion(
           }
         }
 
+        if (section.matches("[data-problem]")) {
+          const replay = { start: "top 75%", toggleActions: "play none none reverse" };
+          qa("[data-stat]", section).forEach((stat, i) => {
+            gsap
+              .timeline({ scrollTrigger: { trigger: stat, ...replay }, delay: i * 0.15 })
+              .from(stat.children, {
+                y: 40,
+                opacity: 0,
+                duration: 1,
+                ease: "expo.out",
+                stagger: 0.12,
+              })
+              .from(
+                q("[data-slash]", stat),
+                { rotate: -180, scale: 0, duration: 1.1, ease: "back.out(2)" },
+                0.2,
+              );
+          });
+          gsap.from(qa("[data-quote] [data-word]", section), {
+            y: 24,
+            opacity: 0,
+            duration: 0.8,
+            ease: "power3.out",
+            stagger: 0.05,
+            scrollTrigger: { trigger: q("[data-quote]", section), ...replay },
+          });
+        }
+
         const actors = qa("[data-actor]", section);
         if (actors.length) {
-          gsap.from(actors, {
-            y: 140,
-            opacity: 0,
-            rotate: (i: number) => (i % 2 ? 3 : -3),
-            duration: 1.4,
-            ease: "expo.out",
-            stagger: 0.12,
+          const cards = gsap.timeline({
             scrollTrigger: {
               trigger: actors[0],
               start: "top 92%",
               toggleActions: "play none none reverse",
             },
           });
+          cards.from(actors, {
+            x: 120,
+            opacity: 0,
+            rotate: (i: number) => (i % 2 ? 3 : -3),
+            duration: 1.3,
+            ease: "expo.out",
+            stagger: 0.15,
+          });
+          actors.forEach((card, i) => {
+            const at = 0.3 + i * 0.15;
+            cards
+              .from(
+                q("div", card)?.children ?? [],
+                { y: 20, opacity: 0, duration: 0.8, ease: "power3.out", stagger: 0.08 },
+                at,
+              )
+              .from(
+                qa("li", card),
+                { x: 30, opacity: 0, duration: 0.7, ease: "power3.out", stagger: 0.07 },
+                at + 0.15,
+              );
+          });
+          // Lift the hovered card a little.
+          for (const card of actors) {
+            const lift = gsap.quickTo(card, "y", { duration: 0.4, ease: "power3.out" });
+            listen(card, "pointerenter", () => lift(-6));
+            listen(card, "pointerleave", () => lift(0));
+          }
         }
 
         if (section.matches("[data-zero]")) {

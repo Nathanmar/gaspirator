@@ -187,8 +187,9 @@ void main() {
   float t1 = stageT(0.0);
   float t2 = stageT(1.0);
   float t3 = stageT(2.0);
-  float t4 = stageT(3.0);
-  float t5 = stageT(4.0);
+  // The crate/heart layout (4) is skipped: the cards sit next to the manifesto now.
+  float t4 = 0.0;
+  float t5 = stageT(3.0);
 
   vec3 p = mix(p0, p1, t1);
   p = mix(p, p2, t2);
@@ -205,7 +206,7 @@ void main() {
   float alpha = mix(1.0, a1, t1);
   alpha = mix(alpha, a2, t2);
   alpha = mix(alpha, a3, t3);
-  alpha = mix(alpha, 1.0, t4);
+  alpha = mix(alpha, 1.0, t5);
 
   // Particles swirl while travelling between layouts, and burst in during the intro.
   float transit = sin(t1 * PI) + sin(t2 * PI) + sin(t3 * PI) + sin(t4 * PI) + sin(t5 * PI);

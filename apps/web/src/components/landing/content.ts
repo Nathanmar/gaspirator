@@ -1,7 +1,7 @@
 export const NAV_LINKS = [
   { href: "#constat", label: "Constat" },
+  { href: "#aspiration", label: "Acteurs" },
   { href: "#circuit", label: "Circuit" },
-  { href: "#acteurs", label: "Acteurs" },
 ] as const;
 
 // The login page doesn't exist yet; the role lets it open on the right audience.
@@ -46,26 +46,14 @@ export const AUDIENCES = [
     id: "fournisseurs",
     eyebrow: "Fournisseurs",
     title: "Vous avez du surplus.",
-    who: "Cantines, hôpitaux, supermarchés, traiteurs.",
-    features: [
-      "Publier un don en quelques clics",
-      "Valider chaque retrait par code",
-      "Suivre l'historique des dons",
-      "Exporter un bilan de vos dons",
-    ],
+    features: ["Publier un don", "Valider le retrait", "Suivre vos dons"],
     tone: "lime",
   },
   {
     id: "associations",
     eyebrow: "Associations",
     title: "Vous avez des repas à servir.",
-    who: "Banques alimentaires, épiceries solidaires, maraudes.",
-    features: [
-      "Trouver les fournisseurs proches",
-      "Filtrer les dons disponibles",
-      "Réserver et récupérer avec un code",
-      "Échanger avec le fournisseur",
-    ],
+    features: ["Trouver un don proche", "Le réserver", "Le récupérer avec un code"],
     tone: "tomato",
   },
 ] as const;

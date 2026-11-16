@@ -1,8 +1,4 @@
-import { ArrowUpRight } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-
-import { JOIN_LINKS } from "../content";
+import { JoinButtons } from "../join-buttons";
 import { LogoMark } from "../logo-mark";
 
 export function ZeroSection() {
@@ -27,24 +23,7 @@ export function ZeroSection() {
         <p data-reveal className="mt-8 max-w-md text-lg leading-snug text-cream/70">
           Chaque don publié, c'est un repas de plus servi, et un déchet de moins.
         </p>
-        <div data-reveal className="mt-10 flex flex-col gap-3 sm:flex-row">
-          {JOIN_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              data-magnetic
-              className={cn(
-                "group inline-flex items-center justify-between gap-4 rounded-full py-2 pr-2 pl-6 font-mono text-[11px] font-semibold tracking-[0.18em] text-ink uppercase",
-                link.tone === "lime" ? "bg-lime" : "bg-tomato",
-              )}
-            >
-              {link.label}
-              <span className="grid size-9 place-items-center rounded-full bg-ink text-cream transition-transform duration-300 group-hover:rotate-45">
-                <ArrowUpRight className="size-4" />
-              </span>
-            </a>
-          ))}
-        </div>
+        <JoinButtons data-reveal className="mt-10" />
       </div>
 
       <footer className="relative border-t border-cream/10 bg-ink/40 backdrop-blur-sm">

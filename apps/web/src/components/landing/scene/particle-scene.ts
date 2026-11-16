@@ -40,9 +40,8 @@ interface CameraKey {
 const CAMERA_KEYS: CameraKey[] = [
   { position: [0, -0.7, 13], target: [0, -1, 0], fit: 0.7, side: 0 },
   { position: [0, 2.6, 11.5], target: [0, -1.1, 0], fit: 1.35, side: 0 },
-  { position: [0, 0.8, 13], target: [0, 0.2, 0], fit: 1, side: -2.4 },
+  { position: [0, 0.8, 13], target: [0, 0.2, 0], fit: 1, side: 2.6 },
   { position: [0, 0.2, 11.5], target: [0, 0, 0], fit: 1.5, side: 0 },
-  { position: [0, 0.4, 12], target: [0, 0.4, 0], fit: 1.55, side: 0 },
   { position: [0, 0, 10.5], target: [0, 0, 0], fit: 1, side: 0 },
 ];
 
@@ -234,9 +233,9 @@ export class ParticleScene {
     this.cameraPosition.addScaledVector(DIVE_POSITION, diveWeight);
     this.cameraTarget.addScaledVector(DIVE_TARGET, diveWeight);
 
-    // Diving re-centres the funnel, since the camera ends up looking straight down into it.
+    // The shift is kept while diving so the funnel stays on the left, beside the cards.
     const wide = Math.min(Math.max((aspect - 1) / 0.6, 0), 1);
-    const side = (from.side + (to.side - from.side) * f) * wide * (1 - diveWeight);
+    const side = (from.side + (to.side - from.side) * f) * wide;
     this.cameraPosition.x += side;
     this.cameraTarget.x += side;
 
