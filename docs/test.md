@@ -178,6 +178,12 @@ Formulaire de connexion (TanStack Form) validé par `loginSchema`. Il reçoit un
 | --- | ---------------- |
 | Requête | `POST http://api.test/registration-requests` avec le corps `RegistrationRequestCreate`, renvoie la demande créée |
 
+### `logout` — `src/features/auth/auth-api.ts`
+
+| Cas | Résultat attendu |
+| --- | ---------------- |
+| Requête | `POST http://api.test/auth/logout`, en-tête `Authorization: Bearer <access_token>`, corps `{ refresh_token }` ; la réponse 204 n'a pas de corps |
+
 ### `useAuthStore` — `src/features/auth/auth-store.ts`
 
 | Cas | Résultat attendu |
@@ -193,7 +199,7 @@ Formulaire de connexion (TanStack Form) validé par `loginSchema`. Il reçoit un
 | Lien d'inscription | « Créer un compte » mène à `/register` avec le même `role` |
 | Connexion réussie | Tokens enregistrés, redirection vers `/` |
 | 401 | « E-mail ou mot de passe incorrect. » (notre texte, pas celui du serveur) |
-| 403 | « Votre compte n'est pas encore actif : … » |
+| 403 | Message du serveur (demande en attente ou refusée) |
 | Serveur injoignable | Message de `NetworkError` |
 
 ### `registerSchema` — `src/features/auth/register-schema.ts`
@@ -232,7 +238,7 @@ Inscription en deux étapes : le compte, puis l'organisation.
 | Étape 2 vide | Erreurs affichées, aucune requête |
 | Fournisseur valide | `{ supplier, account }` envoyé, écran « Demande envoyée » avec le nom saisi |
 | Association valide | `{ association, account }` envoyé, écran « Demande envoyée » avec le nom saisi (pas celui de la réponse : le mock renvoie toujours le même exemple) |
-| 409 | « Un compte existe déjà avec cette adresse e-mail, ce SIRET ou ce n° RNA. » |
+| 409 | Message du serveur (e-mail, ou SIRET / n° RNA déjà utilisé) |
 | Serveur injoignable | Message de `NetworkError` |
 
 ### `Hud` — `src/components/landing/hud.tsx`
@@ -240,6 +246,9 @@ Inscription en deux étapes : le compte, puis l'organisation.
 | Cas | Résultat attendu |
 | --- | ---------------- |
 | Bouton « Rejoindre » | Mène à `/register` |
+| Connecté | « Se déconnecter » remplace « Rejoindre » |
+| « Se déconnecter » | `POST /auth/logout`, tokens oubliés, « Rejoindre » revient |
+| Déconnexion refusée par l'API (token expiré) | La session locale se termine quand même |
 
 ### `Loader` — `src/components/loader.tsx`
 

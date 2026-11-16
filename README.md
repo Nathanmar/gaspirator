@@ -31,7 +31,7 @@ pnpm setup:server
 
 Copy `apps/server/.env.example` to `apps/server/.env` and set `SECRET_KEY` and `DATABASE_URL`.
 
-Copy `apps/web/.env.example` to `apps/web/.env`. `VITE_API_URL` is the base URL of the API contract: the Prism mock (`http://127.0.0.1:4010`, see `pnpm mock`) or the API (`http://localhost:8000/api/v1`). The web app refuses to start without it.
+Copy `apps/web/.env.example` to `apps/web/.env`. `VITE_API_URL` is the base URL of the API contract: `http://127.0.0.1:4010` is Prism, either the mock (`pnpm mock`) or the validation proxy in front of the API (see [Web app on the real API](#web-app-on-the-real-api)). The web app refuses to start without it.
 
 ## Local development
 
@@ -50,6 +50,21 @@ This starts the web app and the API together; if one stops, the other stops too.
 | `pnpm mock`         | Mock API from `openapi.yaml` (port 4010)     |
 | `pnpm test:server`  | API tests (pytest)                           |
 | `pnpm check:server` | Lint the API (Ruff)                          |
+
+### Web app on the real API
+
+```sh
+docker compose up -d db app prism
+pnpm dev:web
+```
+
+The web app (`http://localhost:5173`) talks to the API through the Prism validation proxy on `http://127.0.0.1:4010`, the default `VITE_API_URL`: Prism answers CORS for the dev server and checks every exchange against `openapi.yaml`. Stop `pnpm mock` first, both use port 4010.
+
+A new account stays `pending` until an admin approves it. Until the admin routes exist, approve one in the local database:
+
+```sh
+docker compose exec db psql -U postgres -d gaspirator -c "UPDATE registration_requests SET status = 'approved' WHERE user_id = (SELECT id FROM users WHERE lower(email) = 'marie.dupont@example.org');"
+```
 
 ## Connections
 
