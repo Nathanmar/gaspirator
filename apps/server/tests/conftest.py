@@ -10,6 +10,7 @@ import os
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
+import httpx2
 import pytest
 from alembic import command
 from alembic.config import Config
@@ -22,6 +23,7 @@ from app.db import Base, get_session
 from app.main import app
 from app.models import RegistrationRequest, User
 from app.schemas import OrganizationType, RegistrationStatus, SupplierType, UserRole
+from tests.prism import API_PREFIX, prism_proxy, serve_api
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
@@ -109,6 +111,30 @@ def client(session_factory: sessionmaker[Session]) -> Iterator[TestClient]:
     app.dependency_overrides[get_session] = _get_session
     with TestClient(app) as test_client:
         yield test_client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="session")
+def prism_url(engine: Engine) -> Iterator[str]:
+    """The API served over HTTP behind the Prism validation proxy."""
+    with serve_api(app) as api_url, prism_proxy(api_url + API_PREFIX) as url:
+        yield url
+
+
+@pytest.fixture
+def api(prism_url: str, session_factory: sessionmaker[Session]) -> Iterator[httpx2.Client]:
+    """HTTP client going through Prism (paths without `/api/v1`, as in openapi.yaml).
+
+    Check each response with `tests.prism.assert_contract`.
+    """
+
+    def _get_session() -> Iterator[Session]:
+        with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_session] = _get_session
+    with httpx2.Client(base_url=prism_url, timeout=30) as http_client:
+        yield http_client
     app.dependency_overrides.clear()
 
 

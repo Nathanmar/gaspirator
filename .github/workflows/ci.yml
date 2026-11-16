@@ -62,6 +62,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+      # Node.js runs the Prism validation proxy (npx @stoplight/prism-cli) in the tests.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - name: Install dependencies
         run: uv sync --frozen --extra dev
       - name: Ruff
