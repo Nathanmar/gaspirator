@@ -43,6 +43,22 @@ class Address(StrictModel):
     city: str = Field(min_length=1, max_length=120)
 
 
+class GeoPoint(BaseModel):
+    latitude: float
+    longitude: float
+
+
+class SupplierSummary(BaseModel):
+    """Supplier as seen by the associations (`SupplierSummary` of the contract)."""
+
+    id: int
+    name: str
+    supplier_type: SupplierType
+    address: Address
+    location: GeoPoint
+    contact_phone: str
+
+
 class OrganizationCreate(StrictModel):
     type: OrganizationType
     name: str = Field(min_length=2, max_length=255)

@@ -2,7 +2,17 @@
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, Enum, ForeignKey, Index, String, func
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    Double,
+    Enum,
+    ForeignKey,
+    Index,
+    String,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -21,8 +31,49 @@ def _str_enum(enum_cls: type, name: str) -> Enum:
     )
 
 
+class Supplier(Base):
+    """A supplier (canteen, hospital, supermarket...) that publishes lots."""
+
+    __tablename__ = "suppliers"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255))
+    legal_id: Mapped[str] = mapped_column(String(14), unique=True)  # SIRET
+    supplier_type: Mapped[SupplierType] = mapped_column(_str_enum(SupplierType, "supplier_type"))
+    street: Mapped[str] = mapped_column(String(255))
+    postal_code: Mapped[str] = mapped_column(String(5))
+    city: Mapped[str] = mapped_column(String(120))
+    latitude: Mapped[float] = mapped_column(Double)
+    longitude: Mapped[float] = mapped_column(Double)
+    contact_phone: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Association(Base):
+    """An association that reserves and collects lots."""
+
+    __tablename__ = "associations"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255))
+    legal_id: Mapped[str] = mapped_column(String(10), unique=True)  # n° RNA
+    street: Mapped[str] = mapped_column(String(255))
+    postal_code: Mapped[str] = mapped_column(String(5))
+    city: Mapped[str] = mapped_column(String(120))
+    latitude: Mapped[float] = mapped_column(Double)
+    longitude: Mapped[float] = mapped_column(Double)
+    contact_phone: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class User(Base):
     __tablename__ = "users"
+    # A manager runs either a supplier or an association; an admin runs neither.
+    __table_args__ = (
+        CheckConstraint(
+            "num_nonnulls(supplier_id, association_id) <= 1", name="at_most_one_organization"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     email: Mapped[str] = mapped_column(String(255))
@@ -30,7 +81,12 @@ class User(Base):
     firstname: Mapped[str] = mapped_column(String(255))
     lastname: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(_str_enum(UserRole, "user_role"))
+    supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"), index=True)
+    association_id: Mapped[int | None] = mapped_column(ForeignKey("associations.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    supplier: Mapped[Supplier | None] = relationship()
+    association: Mapped[Association | None] = relationship()
 
     # The database deletes the request with its user (ON DELETE CASCADE).
     registration_request: Mapped["RegistrationRequest | None"] = relationship(
