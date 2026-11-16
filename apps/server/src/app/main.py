@@ -7,12 +7,11 @@ from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from app.settings import get_settings
-from app.auth import create_access_token, verify_token
-from app.errors import validation_exception_handler
+from app.errors import ApiError, api_error_handler, validation_exception_handler
 from app import registration
 
 
@@ -43,6 +42,7 @@ app.add_middleware(
 )
 
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(ApiError, api_error_handler)
 
 # Contract routes (openapi.yaml, server url: /api/v1)
 app.include_router(registration.router, prefix="/api/v1")
@@ -58,28 +58,6 @@ async def root():
 async def health():
     """Health check endpoint."""
     return {"status": "healthy"}
-
-
-# Auth endpoints
-@app.post("/auth/token")
-async def login(username: str = "", password: str = ""):
-    """Create an access token."""
-    if not username:
-        raise HTTPException(status_code=400, detail="Username is required")
-    token = create_access_token(data={"sub": username})
-    return {"access_token": token, "token_type": "bearer"}
-
-
-@app.get("/auth/me")
-async def get_current_user(authorization: str = Header(default="")):
-    """Get the current authenticated user from a Bearer token."""
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
-    token = authorization.removeprefix("Bearer ")
-    payload = verify_token(token)
-    if payload is None:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return {"username": payload.get("sub"), "token_data": payload}
 
 
 if __name__ == "__main__":
