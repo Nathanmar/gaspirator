@@ -37,11 +37,9 @@ function RootComponent() {
 
       <ThemeProvider
         attribute="class"
-        defaultTheme="dark"
-        disableTransitionOnChange
-        storageKey="vite-ui-theme"
+        forcedTheme="light"
       >
-        <div className="grid grid-rows-[auto_1fr] h-svh">
+        <div className="grid grid-rows-[auto_1fr] grid-cols-[minmax(0,1fr)] h-svh">
           <Header />
           <Outlet />
         </div>

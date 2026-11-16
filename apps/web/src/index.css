@@ -1,8 +1,19 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@plugin "daisyui";
+@plugin "daisyui" {
+  themes: light --default;
+}
 
 @custom-variant dark (&:is(.dark *));
+
+/* Brand palette — not wired into the theme yet */
+:root {
+  --bright-snow: #fafafa;
+  --alice-blue: #e3f2fd;
+  --lobster-pink: #db5461;
+  --dim-grey: #686963;
+  --muted-teal: #8aa29e;
+}
 
 /* Basic Tailwind setup without shadcn-ui theme */
 @layer base {
