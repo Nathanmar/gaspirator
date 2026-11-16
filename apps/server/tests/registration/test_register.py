@@ -1,53 +1,98 @@
-"""POST /registration-requests: 201 `RegistrationRequest`, 400, 409 and 422 (format `Error`)."""
+"""POST /registration-requests: 201 `RegistrationRequest`, 400, 409 and 422 (format `Error`).
 
-import uuid
+The body registers either a supplier (`supplier`, with a SIRET) or an association
+(`association`, with an RNA number), with the account of its manager.
+"""
 
+import httpx2
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
+from app.models import RegistrationRequest, User
+from app.schemas import RegistrationStatus
 from tests.conftest import REGISTRATION_URL
+from tests.prism import API_PREFIX, assert_contract
+
+REGISTRATION_PATH = REGISTRATION_URL.removeprefix(API_PREFIX)
+
+REQUEST_FIELDS = {
+    "id",
+    "status",
+    "supplier",
+    "association",
+    "account",
+    "supplier_id",
+    "association_id",
+    "created_at",
+    "decided_at",
+}
+
+
+def _assert_error(response, status: int, code: str) -> dict:
+    assert response.status_code == status
+    data = response.json()
+    assert data["code"] == code
+    assert isinstance(data["message"], str) and data["message"]
+    return data
+
+
+def _request_count(db: Session) -> int:
+    return db.scalar(select(func.count()).select_from(RegistrationRequest))
+
 
 # ----- 201 -----
 
 
-def test_register(client: TestClient, registration: dict):
-    """A supplier registration creates a `pending` request."""
-    response = client.post(REGISTRATION_URL, json=registration)
+def test_register_supplier(api: httpx2.Client, registration: dict, db: Session):
+    response = api.post(REGISTRATION_PATH, json=registration)
 
+    assert_contract(response)
     assert response.status_code == 201
     data = response.json()
-    assert set(data) == {
-        "id",
-        "status",
-        "organization",
-        "account",
-        "organization_id",
-        "created_at",
-        "decided_at",
-    }
+    assert set(data) == REQUEST_FIELDS
     assert isinstance(data["id"], int)
     assert data["status"] == "pending"
-    assert data["organization"] == registration["organization"]
+    assert data["supplier"] == registration["supplier"]
+    assert data["association"] is None
     assert data["account"] == {
         "firstname": "Marie",
         "lastname": "Dupont",
         "email": "marie.dupont@example.org",
     }
-    assert data["organization_id"] is None
+    assert data["supplier_id"] is None
+    assert data["association_id"] is None
     assert data["created_at"]
     assert data["decided_at"] is None
 
+    request = db.get(RegistrationRequest, data["id"])
+    assert request.status == RegistrationStatus.PENDING
+    assert request.user.email == "marie.dupont@example.org"
+    assert request.user.password_hash != "testPass1."
 
-def test_register_association(client: TestClient, registration: dict):
-    """An association has an RNA number and no supplier_type."""
-    registration["organization"].update(
-        {"type": "association", "legal_id": "W691234567", "supplier_type": None}
-    )
-    registration["account"]["email"] = "asso.dupont@example.org"
-    response = client.post(REGISTRATION_URL, json=registration)
 
+def test_register_association(api: httpx2.Client, association_registration: dict):
+    response = api.post(REGISTRATION_PATH, json=association_registration)
+
+    assert_contract(response)
     assert response.status_code == 201
-    assert response.json()["organization"]["supplier_type"] is None
+    data = response.json()
+    assert set(data) == REQUEST_FIELDS
+    assert data["supplier"] is None
+    assert data["association"] == association_registration["association"]
+    assert data["account"]["email"] == "paul.martin@example.org"
+    assert data["supplier_id"] is None
+    assert data["association_id"] is None
+
+
+def test_register_does_not_create_the_supplier_yet(api: httpx2.Client, registration: dict, db):
+    """The supplier is created when an admin approves the request; the user has none."""
+    response = api.post(REGISTRATION_PATH, json=registration)
+
+    user = db.scalar(select(User))
+    assert response.status_code == 201
+    assert user.supplier_id is None and user.association_id is None
 
 
 # ----- 400 -----
@@ -57,79 +102,93 @@ def test_register_association(client: TestClient, registration: dict):
     "body",
     [
         "{",
-        '{"organization": {"type": "supplier"},}',
+        '{"supplier": {"name": "Cantine"},}',
         '{"account": {"email": "marie.dupont@example.org" "password": "testPass1."}}',
-        "{'organization': {}, 'account': {}}",
+        "{'supplier': {}, 'account': {}}",
         "not json",
     ],
     ids=["unclosed", "trailing-comma", "missing-comma", "single-quotes", "plain-text"],
 )
-def test_register_malformed_json(client: TestClient, body: str):
+def test_register_malformed_json(client: TestClient, body: str, db: Session):
+    """Sent in-process: Prism never answers a malformed JSON body."""
     response = client.post(
-        REGISTRATION_URL,
-        content=body,
-        headers={"Content-Type": "application/json"},
+        REGISTRATION_URL, content=body, headers={"Content-Type": "application/json"}
     )
 
-    assert response.status_code == 400
-    data = response.json()
-    assert data["code"] == "bad_request"
-    assert isinstance(data["message"], str) and data["message"]
+    _assert_error(response, 400, "bad_request")
+    assert _request_count(db) == 0
 
 
 # ----- 409 -----
 
 
-def _unique_siret() -> str:
-    """14-digit SIRET, different on every call."""
-    return str(uuid.uuid4().int)[:14]
+def test_register_email_already_used(
+    api: httpx2.Client, registration: dict, association_registration: dict, db: Session
+):
+    """Same e-mail (any case), whether for a supplier or an association: 409."""
+    assert api.post(REGISTRATION_PATH, json=registration).status_code == 201
+    association_registration["account"]["email"] = "Marie.Dupont@Example.org"
+
+    response = api.post(REGISTRATION_PATH, json=association_registration)
+
+    assert_contract(response)
+    _assert_error(response, 409, "conflict")
+    assert _request_count(db) == 1
 
 
-def _unique_email() -> str:
-    return f"test-{uuid.uuid4().hex[:8]}@example.com"
+def test_register_siret_already_used(api: httpx2.Client, registration: dict, db: Session):
+    assert api.post(REGISTRATION_PATH, json=registration).status_code == 201
+    registration["account"]["email"] = "autre@example.org"
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
+    assert_contract(response)
+    _assert_error(response, 409, "conflict")
+    assert _request_count(db) == 1
 
 
-def _with(registration: dict, email: str, legal_id: str) -> dict:
-    registration["account"]["email"] = email
-    registration["organization"]["legal_id"] = legal_id
-    return registration
+def test_register_rna_already_used(api: httpx2.Client, association_registration: dict):
+    assert api.post(REGISTRATION_PATH, json=association_registration).status_code == 201
+    association_registration["account"]["email"] = "autre@example.org"
+
+    response = api.post(REGISTRATION_PATH, json=association_registration)
+
+    assert_contract(response)
+    _assert_error(response, 409, "conflict")
 
 
-def test_register_email_already_used(client: TestClient, registration: dict):
-    """Same e-mail, different SIRET: 409."""
-    email = _unique_email()
+def test_register_siret_of_an_existing_supplier(
+    api: httpx2.Client, registration: dict, create_supplier
+):
+    create_supplier(legal_id=registration["supplier"]["legal_id"])
 
-    first = client.post(REGISTRATION_URL, json=_with(registration, email, _unique_siret()))
-    assert first.status_code == 201
+    response = api.post(REGISTRATION_PATH, json=registration)
 
-    second = client.post(REGISTRATION_URL, json=_with(registration, email, _unique_siret()))
-    assert second.status_code == 409
-    assert second.json()["code"] == "conflict"
+    assert_contract(response)
+    _assert_error(response, 409, "conflict")
 
 
-def test_register_siret_already_used(client: TestClient, registration: dict):
-    """Same SIRET, different e-mail: 409."""
-    siret = _unique_siret()
+def test_register_rna_of_an_existing_association(
+    api: httpx2.Client, association_registration: dict, create_association
+):
+    create_association(legal_id=association_registration["association"]["legal_id"])
 
-    first = client.post(REGISTRATION_URL, json=_with(registration, _unique_email(), siret))
-    assert first.status_code == 201
+    response = api.post(REGISTRATION_PATH, json=association_registration)
 
-    second = client.post(REGISTRATION_URL, json=_with(registration, _unique_email(), siret))
-    assert second.status_code == 409
-    assert second.json()["code"] == "conflict"
+    assert_contract(response)
+    _assert_error(response, 409, "conflict")
 
 
 # ----- 422 -----
 
 
 def _assert_validation_error(response, field: str) -> None:
-    assert response.status_code == 422
-    data = response.json()
-    assert data["code"] == "validation_error"
-    assert isinstance(data["message"], str) and data["message"]
+    assert_contract(response, invalid_request=True)
+    data = _assert_error(response, 422, "validation_error")
     assert field in [detail["field"] for detail in data["details"]]
     for detail in data["details"]:
         assert set(detail) == {"field", "message"}
+        assert detail["message"]
 
 
 @pytest.mark.parametrize(
@@ -138,54 +197,116 @@ def _assert_validation_error(response, field: str) -> None:
         ("account", "email", "invalid-email"),
         ("account", "password", "weak"),
         ("account", "firstname", ""),
-        ("organization", "name", "A"),
-        ("organization", "legal_id", "123456789"),
-        ("organization", "type", "restaurant"),
-        ("organization", "supplier_type", "restaurant"),
-        ("organization", "contact_phone", "555-1234"),
+        ("supplier", "name", "A"),
+        ("supplier", "legal_id", "123456789"),
+        ("supplier", "legal_id", "W691234567"),
+        ("supplier", "supplier_type", "restaurant"),
+        ("supplier", "supplier_type", None),
+        ("supplier", "contact_phone", "555-1234"),
     ],
 )
-def test_register_invalid_field(
-    client: TestClient, registration: dict, section: str, field: str, value: str
+def test_register_supplier_invalid_field(
+    api: httpx2.Client, registration: dict, section: str, field: str, value, db: Session
 ):
     registration[section][field] = value
-    response = client.post(REGISTRATION_URL, json=registration)
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
     _assert_validation_error(response, f"{section}.{field}")
+    assert _request_count(db) == 0
 
 
-def test_register_invalid_postal_code(client: TestClient, registration: dict):
-    registration["organization"]["address"]["postal_code"] = "6900"
-    response = client.post(REGISTRATION_URL, json=registration)
-    _assert_validation_error(response, "organization.address.postal_code")
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("name", "A"), ("legal_id", "19690103400017"), ("legal_id", "W12"), ("contact_phone", "1")],
+)
+def test_register_association_invalid_field(
+    api: httpx2.Client, association_registration: dict, field: str, value: str
+):
+    association_registration["association"][field] = value
+
+    response = api.post(REGISTRATION_PATH, json=association_registration)
+
+    _assert_validation_error(response, f"association.{field}")
+
+
+def test_register_association_with_supplier_type(
+    api: httpx2.Client, association_registration: dict
+):
+    """An association has no type of establishment (additionalProperties: false)."""
+    association_registration["association"]["supplier_type"] = "canteen"
+
+    response = api.post(REGISTRATION_PATH, json=association_registration)
+
+    _assert_validation_error(response, "association.supplier_type")
+
+
+def test_register_invalid_postal_code(api: httpx2.Client, registration: dict):
+    registration["supplier"]["address"]["postal_code"] = "6900"
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
+    _assert_validation_error(response, "supplier.address.postal_code")
 
 
 @pytest.mark.parametrize("field", ["firstname", "lastname", "email", "password"])
-def test_register_missing_account_field(client: TestClient, registration: dict, field: str):
+def test_register_missing_account_field(api: httpx2.Client, registration: dict, field: str):
     del registration["account"][field]
-    response = client.post(REGISTRATION_URL, json=registration)
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
     _assert_validation_error(response, f"account.{field}")
 
 
-def test_register_missing_organization(client: TestClient, registration: dict):
-    del registration["organization"]
-    response = client.post(REGISTRATION_URL, json=registration)
+@pytest.mark.parametrize("field", ["name", "legal_id", "supplier_type", "address", "contact_phone"])
+def test_register_missing_supplier_field(api: httpx2.Client, registration: dict, field: str):
+    del registration["supplier"][field]
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
+    _assert_validation_error(response, f"supplier.{field}")
+
+
+def test_register_missing_account(api: httpx2.Client, registration: dict):
+    del registration["account"]
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
+    _assert_validation_error(response, "account")
+
+
+def test_register_neither_supplier_nor_association(api: httpx2.Client, registration: dict):
+    del registration["supplier"]
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
+    _assert_validation_error(response, "supplier")
+
+
+def test_register_both_supplier_and_association(
+    api: httpx2.Client, registration: dict, association_registration: dict, db: Session
+):
+    registration["association"] = association_registration["association"]
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
+    _assert_validation_error(response, "association")
+    assert _request_count(db) == 0
+
+
+def test_register_former_organization_format(api: httpx2.Client, registration: dict):
+    """The `organization` object of the previous contract is no longer accepted."""
+    registration["organization"] = {**registration.pop("supplier"), "type": "supplier"}
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
     _assert_validation_error(response, "organization")
 
 
-def test_register_unknown_field(client: TestClient, registration: dict):
+def test_register_unknown_field(api: httpx2.Client, registration: dict):
     """additionalProperties: false"""
-    registration["organization"]["opening_hours"] = "9h-17h"
-    response = client.post(REGISTRATION_URL, json=registration)
-    _assert_validation_error(response, "organization.opening_hours")
+    registration["supplier"]["opening_hours"] = "9h-17h"
 
+    response = api.post(REGISTRATION_PATH, json=registration)
 
-def test_register_supplier_without_supplier_type(client: TestClient, registration: dict):
-    registration["organization"]["supplier_type"] = None
-    response = client.post(REGISTRATION_URL, json=registration)
-    _assert_validation_error(response, "organization.supplier_type")
-
-
-def test_register_association_with_supplier_type(client: TestClient, registration: dict):
-    registration["organization"].update({"type": "association", "legal_id": "W691234567"})
-    response = client.post(REGISTRATION_URL, json=registration)
-    _assert_validation_error(response, "organization.supplier_type")
+    _assert_validation_error(response, "supplier.opening_hours")

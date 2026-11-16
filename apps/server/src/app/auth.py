@@ -12,8 +12,8 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.db import get_session
-from app.errors import unauthorized
-from app.models import User
+from app.errors import forbidden, unauthorized
+from app.models import Supplier, User
 from app.settings import get_settings
 
 ALGORITHM = "HS256"
@@ -89,3 +89,13 @@ def get_current_user(
     if user is None:
         raise unauthorized("Token d'accès invalide ou expiré.")
     return user
+
+
+def get_current_supplier(user: Annotated[User, Depends(get_current_user)]) -> Supplier:
+    """FastAPI dependency: the supplier run by the current user, or 403.
+
+    As a dependency, the role is checked before the request body is validated.
+    """
+    if user.supplier is None:
+        raise forbidden("Action réservée aux fournisseurs.")
+    return user.supplier

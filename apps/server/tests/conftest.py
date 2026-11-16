@@ -19,10 +19,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, make_url, text
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.auth import hash_password
+from app.auth import create_access_token, hash_password
 from app.db import Base, get_session
 from app.main import app
-from app.models import RegistrationRequest, User
+from app.models import Association, RegistrationRequest, Supplier, User
 from app.schemas import OrganizationType, RegistrationStatus, SupplierType, UserRole
 from tests.prism import API_PREFIX, prism_proxy, serve_api
 
@@ -33,9 +33,8 @@ TEST_DATABASE_URL = os.getenv(
 
 REGISTRATION_URL = "/api/v1/registration-requests"
 
-VALID_REGISTRATION = {
-    "organization": {
-        "type": "supplier",
+VALID_SUPPLIER_REGISTRATION = {
+    "supplier": {
         "name": "Cantine du lycée Ampère",
         "legal_id": "19690103400017",
         "supplier_type": "canteen",
@@ -50,6 +49,25 @@ VALID_REGISTRATION = {
         "firstname": "Marie",
         "lastname": "Dupont",
         "email": "marie.dupont@example.org",
+        "password": "testPass1.",
+    },
+}
+
+VALID_ASSOCIATION_REGISTRATION = {
+    "association": {
+        "name": "Restos du Cœur Lyon 2",
+        "legal_id": "W691234567",
+        "address": {
+            "street": "3 rue Sainte-Hélène",
+            "postal_code": "69002",
+            "city": "Lyon",
+        },
+        "contact_phone": "04 78 00 00 01",
+    },
+    "account": {
+        "firstname": "Paul",
+        "lastname": "Martin",
+        "email": "paul.martin@example.org",
         "password": "testPass1.",
     },
 }
@@ -141,13 +159,75 @@ def api(prism_url: str, session_factory: sessionmaker[Session]) -> Iterator[http
 
 @pytest.fixture
 def registration() -> dict:
-    """A valid registration request body (deep copy, safe to mutate)."""
-    return copy.deepcopy(VALID_REGISTRATION)
+    """A valid supplier registration request body (deep copy, safe to mutate)."""
+    return copy.deepcopy(VALID_SUPPLIER_REGISTRATION)
+
+
+@pytest.fixture
+def association_registration() -> dict:
+    """A valid association registration request body (deep copy, safe to mutate)."""
+    return copy.deepcopy(VALID_ASSOCIATION_REGISTRATION)
+
+
+@pytest.fixture
+def create_supplier(db: Session) -> Callable[..., Supplier]:
+    """Insert a supplier (unique SIRET); keyword arguments override the columns."""
+    sirets = itertools.count(19690103400017)
+
+    def _create_supplier(**columns) -> Supplier:
+        supplier = Supplier(
+            **{
+                "name": "Cantine du lycée Ampère",
+                "legal_id": str(next(sirets)),
+                "supplier_type": SupplierType.CANTEEN,
+                "street": "12 rue de la République",
+                "postal_code": "69002",
+                "city": "Lyon",
+                "latitude": 45.7578,
+                "longitude": 4.832,
+                "contact_phone": "04 78 00 00 00",
+                **columns,
+            }
+        )
+        db.add(supplier)
+        db.commit()
+        return supplier
+
+    return _create_supplier
+
+
+@pytest.fixture
+def create_association(db: Session) -> Callable[..., Association]:
+    """Insert an association (unique RNA number); keyword arguments override the columns."""
+    rna_numbers = itertools.count(691234567)
+
+    def _create_association(**columns) -> Association:
+        association = Association(
+            **{
+                "name": "Restos du Cœur Lyon 2",
+                "legal_id": f"W{next(rna_numbers)}",
+                "street": "3 rue Sainte-Hélène",
+                "postal_code": "69002",
+                "city": "Lyon",
+                "latitude": 45.7537,
+                "longitude": 4.8286,
+                "contact_phone": "04 78 00 00 01",
+                **columns,
+            }
+        )
+        db.add(association)
+        db.commit()
+        return association
+
+    return _create_association
 
 
 @pytest.fixture
 def create_user(db: Session) -> Callable[..., User]:
-    """Insert a user. Managers get a registration request with the given status."""
+    """Insert a user. Managers get a registration request with the given status.
+
+    Pass `supplier` or `association` to make the user the manager of it.
+    """
     legal_ids = itertools.count(19690103400017)  # unique SIRET per request
 
     def _create_user(
@@ -155,6 +235,8 @@ def create_user(db: Session) -> Callable[..., User]:
         password: str = "testPass1.",
         role: UserRole = UserRole.MANAGER,
         registration_status: RegistrationStatus = RegistrationStatus.APPROVED,
+        supplier: Supplier | None = None,
+        association: Association | None = None,
     ) -> User:
         user = User(
             email=email,
@@ -162,6 +244,8 @@ def create_user(db: Session) -> Callable[..., User]:
             firstname="Marie",
             lastname="Dupont",
             role=role,
+            supplier=supplier,
+            association=association,
         )
         if role == UserRole.MANAGER:
             user.registration_request = RegistrationRequest(
@@ -191,3 +275,13 @@ def tokens(api: httpx2.Client, create_user) -> dict:
     )
     assert response.status_code == 200
     return response.json()
+
+
+@pytest.fixture
+def auth_headers() -> Callable[[User], dict]:
+    """`Authorization: Bearer` header with a valid access token for the given user."""
+
+    def _auth_headers(user: User) -> dict:
+        return {"Authorization": f"Bearer {create_access_token(user)}"}
+
+    return _auth_headers
