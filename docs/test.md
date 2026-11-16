@@ -239,7 +239,17 @@ Inscription en deux étapes : le compte, puis l'organisation.
 | Fournisseur valide | `{ supplier, account }` envoyé, écran « Demande envoyée » avec le nom saisi |
 | Association valide | `{ association, account }` envoyé, écran « Demande envoyée » avec le nom saisi (pas celui de la réponse : le mock renvoie toujours le même exemple) |
 | 409 | Message du serveur (e-mail, ou SIRET / n° RNA déjà utilisé) |
+| 422 | « Certaines informations ont été refusées : » suivi des champs refusés, avec leur libellé (« E-mail : adresse e-mail invalide ») |
 | Serveur injoignable | Message de `NetworkError` |
+
+### `redirectIfLoggedIn` — `src/features/auth/auth-guard.ts`
+
+`beforeLoad` des routes `/login` et `/register`.
+
+| Cas | Résultat attendu |
+| --- | ---------------- |
+| Visiteur | La page s'ouvre |
+| Utilisateur connecté | Redirection vers `/` |
 
 ### `Hud` — `src/components/landing/hud.tsx`
 
@@ -249,6 +259,7 @@ Inscription en deux étapes : le compte, puis l'organisation.
 | Connecté | « Se déconnecter » remplace « Rejoindre » |
 | « Se déconnecter » | `POST /auth/logout`, tokens oubliés, « Rejoindre » revient |
 | Déconnexion refusée par l'API (token expiré) | La session locale se termine quand même |
+| Double toucher sur « Se déconnecter » | Une seule requête |
 
 ### `Loader` — `src/components/loader.tsx`
 
