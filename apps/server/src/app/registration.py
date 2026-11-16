@@ -3,14 +3,18 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import exists, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models
 from app.auth import hash_password
 from app.db import get_session
+from app.errors import ApiError
 from app.schemas import (
     AccountSummary,
     Address,
+    Error,
     OrganizationCreate,
     RegistrationRequest,
     RegistrationRequestCreate,
@@ -19,6 +23,9 @@ from app.schemas import (
 )
 
 router = APIRouter(tags=["Registration"])
+
+_EMAIL_USED = "Cette adresse e-mail est déjà utilisée."
+_LEGAL_ID_USED = "Ce SIRET ou ce n° RNA est déjà utilisé."
 
 
 def _to_schema(request: models.RegistrationRequest) -> RegistrationRequest:
@@ -46,16 +53,36 @@ def _to_schema(request: models.RegistrationRequest) -> RegistrationRequest:
     )
 
 
+def _conflict_message(session: Session, payload: RegistrationRequestCreate) -> str | None:
+    """Return why the request conflicts with an existing account or request, or None."""
+    email_used = session.scalar(
+        select(exists().where(func.lower(models.User.email) == payload.account.email.lower()))
+    )
+    if email_used:
+        return _EMAIL_USED
+    legal_id_used = session.scalar(
+        select(exists().where(models.RegistrationRequest.legal_id == payload.organization.legal_id))
+    )
+    if legal_id_used:
+        return _LEGAL_ID_USED
+    return None
+
+
 @router.post(
     "/registration-requests",
     status_code=201,
     response_model=RegistrationRequest,
     operation_id="createRegistrationRequest",
+    responses={409: {"model": Error, "description": "SIRET, n° RNA ou e-mail déjà utilisé"}},
 )
 def create_registration_request(
     payload: RegistrationRequestCreate, session: Annotated[Session, Depends(get_session)]
 ) -> RegistrationRequest:
     """Create a `pending` registration request for an organisation and its manager."""
+    conflict = _conflict_message(session, payload)
+    if conflict is not None:
+        raise ApiError(409, "conflict", conflict)
+
     organization, account = payload.organization, payload.account
     user = models.User(
         email=account.email,
@@ -77,6 +104,12 @@ def create_registration_request(
         contact_phone=organization.contact_phone,
     )
     session.add(request)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError as exc:
+        # Concurrent registration with the same e-mail or legal id (unique constraints).
+        session.rollback()
+        message = _EMAIL_USED if "email" in str(exc.orig) else _LEGAL_ID_USED
+        raise ApiError(409, "conflict", message) from exc
     session.refresh(request)
     return _to_schema(request)
