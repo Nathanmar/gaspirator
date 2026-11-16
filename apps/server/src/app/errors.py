@@ -62,6 +62,10 @@ _UNAUTHORIZED_HEADERS = {"WWW-Authenticate": "Bearer"}
 # covers "paramètre incorrect").
 _BAD_REQUEST_ON_VALIDATION = {"refreshToken", "logout"}
 
+# Operations whose contract has neither 400 nor 422: an id that cannot exist (not an
+# integer, out of range) is simply not found.
+_NOT_FOUND_ON_VALIDATION = {"getLot": "Lot introuvable."}
+
 
 class ApiError(Exception):
     """An error answered in the contract `Error` format."""
@@ -79,6 +83,10 @@ def unauthorized(message: str) -> ApiError:
 
 def forbidden(message: str) -> ApiError:
     return ApiError(403, "forbidden", message)
+
+
+def not_found(message: str) -> ApiError:
+    return ApiError(404, "not_found", message)
 
 
 async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
@@ -103,8 +111,12 @@ async def validation_exception_handler(
         body = Error(code="bad_request", message="Le corps de la requête n'est pas un JSON valide.")
         return JSONResponse(status_code=400, content=body.model_dump(exclude_none=True))
 
-    route = request.scope.get("route")
-    if getattr(route, "operation_id", None) in _BAD_REQUEST_ON_VALIDATION:
+    operation_id = getattr(request.scope.get("route"), "operation_id", None)
+    if operation_id in _NOT_FOUND_ON_VALIDATION:
+        body = Error(code="not_found", message=_NOT_FOUND_ON_VALIDATION[operation_id])
+        return JSONResponse(status_code=404, content=body.model_dump(exclude_none=True))
+
+    if operation_id in _BAD_REQUEST_ON_VALIDATION:
         body = Error(code="bad_request", message="Paramètres incorrects.", details=_details(exc))
         return JSONResponse(status_code=400, content=body.model_dump())
 
