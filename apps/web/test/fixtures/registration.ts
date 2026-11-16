@@ -1,4 +1,7 @@
+import type { RegistrationRequest, RegistrationRequestCreate } from "@/features/auth/auth-api";
+
 // A supplier's registration, as sent to and returned by `POST /registration-requests`.
+// `satisfies` makes TypeScript check them against the contract types.
 
 export const registrationPayload = {
   organization: {
@@ -15,7 +18,7 @@ export const registrationPayload = {
     email: "marie.dupont@example.org",
     password: "motdepasse",
   },
-} as const;
+} as const satisfies RegistrationRequestCreate;
 
 export const createdRegistration = {
   id: 18,
@@ -25,4 +28,4 @@ export const createdRegistration = {
   organization_id: null,
   created_at: "2026-11-16T14:00:00Z",
   decided_at: null,
-} as const;
+} as const satisfies RegistrationRequest;

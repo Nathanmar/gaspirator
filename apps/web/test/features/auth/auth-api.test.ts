@@ -3,17 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import { createRegistrationRequest, login } from "@/features/auth/auth-api";
 import { ApiError, NetworkError } from "@/lib/api-client";
 
+import { tokens } from "../../fixtures/auth";
 import { createdRegistration, registrationPayload } from "../../fixtures/registration";
 import { jsonResponse, mockFetch } from "../../utils/fetch";
 
 const credentials = { email: "marie.dupont@example.org", password: "secret" };
-
-const tokens = {
-  access_token: "access",
-  refresh_token: "refresh",
-  token_type: "Bearer",
-  expires_in: 900,
-};
 
 const FALLBACK_MESSAGE = "Une erreur inattendue est survenue. Réessayez plus tard.";
 

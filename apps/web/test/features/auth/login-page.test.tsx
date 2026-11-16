@@ -5,15 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoginPage } from "@/features/auth/login-page";
 import { useAuthStore } from "@/features/auth/auth-store";
 
+import { tokens } from "../../fixtures/auth";
 import { jsonResponse, mockFetch, sentBody } from "../../utils/fetch";
 import { renderWithRouter } from "../../utils/render-with-router";
-
-const tokens = {
-  access_token: "access",
-  refresh_token: "refresh",
-  token_type: "Bearer",
-  expires_in: 900,
-};
 
 beforeEach(() => {
   useAuthStore.setState({ tokens: null });

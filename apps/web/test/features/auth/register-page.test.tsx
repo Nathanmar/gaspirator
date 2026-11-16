@@ -20,7 +20,10 @@ async function fillAccountStep() {
 
 // Step 2: a supplier, with the values of `registrationPayload`.
 async function fillSupplierStep() {
-  await userEvent.type(await screen.findByLabelText("Nom de l'organisation"), "Cantine du lycée Ampère");
+  await userEvent.type(
+    await screen.findByLabelText("Nom de l'organisation"),
+    "Cantine du lycée Ampère",
+  );
   await userEvent.type(screen.getByLabelText("SIRET"), "19690103400017");
   await userEvent.selectOptions(screen.getByLabelText("Type d'établissement"), "Cantine");
   await userEvent.type(screen.getByLabelText("Adresse"), "12 rue de la République");

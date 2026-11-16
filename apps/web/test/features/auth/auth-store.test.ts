@@ -2,12 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { useAuthStore } from "@/features/auth/auth-store";
 
-const tokens = {
-  access_token: "access",
-  refresh_token: "refresh",
-  token_type: "Bearer" as const,
-  expires_in: 900,
-};
+import { tokens } from "../../fixtures/auth";
 
 beforeEach(() => {
   useAuthStore.setState({ tokens: null });
