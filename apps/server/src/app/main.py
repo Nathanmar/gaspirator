@@ -81,6 +81,7 @@ async def get_current_user(authorization: str = Header(default="")):
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return {"username": payload.get("sub"), "token_data": payload}
 
+
 if __name__ == "__main__":
     import uvicorn
 

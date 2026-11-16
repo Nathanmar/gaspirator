@@ -26,6 +26,11 @@ class RegistrationStatus(StrEnum):
     REJECTED = "rejected"
 
 
+class UserRole(StrEnum):
+    ADMIN = "admin"
+    MANAGER = "manager"
+
+
 class StrictModel(BaseModel):
     """Request body model: unknown fields are rejected (additionalProperties: false)."""
 
