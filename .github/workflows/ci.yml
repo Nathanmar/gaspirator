@@ -42,13 +42,38 @@ jobs:
     defaults:
       run:
         working-directory: apps/server
+    services:
+      # Same image as the `db` service of docker-compose.yml.
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gaspirator_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gaspirator_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/gaspirator_test
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+      # Node.js runs the Prism validation proxy (npx @stoplight/prism-cli) in the tests.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - name: Install dependencies
         run: uv sync --frozen --extra dev
       - name: Ruff
         run: uv run --frozen ruff check .
+      - name: Migrations up to date
+        run: uv run --frozen alembic upgrade head && uv run --frozen alembic check
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
       - name: Pytest
         run: uv run --frozen pytest
 

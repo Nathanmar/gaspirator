@@ -1,166 +1,51 @@
-"""US-01 / US-06: account and organisation of the logged-in user (tag `Profile`)."""
+"""US-01: the logged-in user (GET /me)."""
 
-from fastapi import APIRouter, Response
+from typing import Annotated
 
-from app.auth import hash_password, verify_password
-from app.dependencies import CurrentUser, Organizations, Users
-from app.errors import ApiError
-from app.repositories import OrganizationRepository, StoredUser
-from app.schemas import (
-    Error,
-    ErrorDetail,
-    Me,
-    MeUpdate,
-    Organization,
-    OrganizationStatus,
-    OrganizationType,
-    OrganizationUpdate,
-    PasswordChange,
-    UserRole,
-)
+from fastapi import APIRouter, Depends
 
-router = APIRouter(tags=["Profile"])
+from app import models
+from app.auth import get_current_user
+from app.schemas import Address, Error, GeoPoint, Me, Organization
 
-_UNAUTHORIZED = {401: {"model": Error, "description": "Token absent, invalide ou expiré"}}
-_BAD_REQUEST = {400: {"model": Error, "description": "Requête malformée"}}
-_VALIDATION = {422: {"model": Error, "description": "Contraintes de validation non respectées"}}
-_NOT_FOUND = {404: {"model": Error, "description": "Ressource introuvable"}}
-_FORBIDDEN = {403: {"model": Error, "description": "Réservé au responsable (manager)"}}
+# The contract puts GET /me under the `Auth` tag.
+router = APIRouter(tags=["Auth"])
+
+CurrentUser = Annotated[models.User, Depends(get_current_user)]
 
 
-def _conflict(description: str) -> dict:
-    return {409: {"model": Error, "description": description}}
-
-
-async def _to_me(user: StoredUser, organizations: OrganizationRepository) -> Me:
-    organization = (
-        await organizations.get(user.organization_id) if user.organization_id is not None else None
+def to_organization(organization: models.Organization) -> Organization:
+    """Contract `Organization` from the `organizations` row (address and location nested)."""
+    return Organization(
+        id=organization.id,
+        type=organization.type,
+        name=organization.name,
+        supplier_type=organization.supplier_type,
+        address=Address(
+            street=organization.street,
+            postal_code=organization.postal_code,
+            city=organization.city,
+        ),
+        location=GeoPoint(latitude=organization.latitude, longitude=organization.longitude),
+        contact_phone=organization.contact_phone,
+        legal_id=organization.legal_id,
+        created_at=organization.created_at,
     )
+
+
+@router.get(
+    "/me",
+    response_model=Me,
+    operation_id="getMe",
+    responses={401: {"model": Error}},
+)
+def get_me(user: CurrentUser) -> Me:
+    """Récupérer l'utilisateur connecté."""
     return Me(
         id=user.id,
         email=user.email,
         firstname=user.firstname,
         lastname=user.lastname,
         role=user.role,
-        organization=organization,
+        organization=to_organization(user.organization) if user.organization else None,
     )
-
-
-@router.get("/me", response_model=Me, operation_id="getMe", responses=_UNAUTHORIZED)
-async def get_me(user: CurrentUser, organizations: Organizations) -> Me:
-    """Récupérer l'utilisateur connecté."""
-    return await _to_me(user, organizations)
-
-
-@router.patch(
-    "/me",
-    response_model=Me,
-    operation_id="updateMe",
-    responses={
-        **_BAD_REQUEST,
-        **_UNAUTHORIZED,
-        **_conflict("Le nouvel e-mail est déjà utilisé"),
-        **_VALIDATION,
-    },
-)
-async def update_me(
-    payload: MeUpdate, user: CurrentUser, users: Users, organizations: Organizations
-) -> Me:
-    """Modifier mon compte."""
-    changes = payload.model_dump(exclude_unset=True)
-
-    if "email" in changes:
-        owner = await users.get_by_email(changes["email"])
-        if owner is not None and owner.id != user.id:
-            raise ApiError(409, "conflict", "Cette adresse e-mail est déjà utilisée.")
-
-    updated = await users.update(user.model_copy(update=changes))
-    return await _to_me(updated, organizations)
-
-
-@router.put(
-    "/me/password",
-    status_code=204,
-    response_class=Response,
-    operation_id="changePassword",
-    responses={**_BAD_REQUEST, **_UNAUTHORIZED, **_VALIDATION},
-)
-async def change_password(payload: PasswordChange, user: CurrentUser, users: Users) -> Response:
-    """Changer mon mot de passe."""
-    if not verify_password(payload.current_password, user.password_hash):
-        raise ApiError(
-            422,
-            "validation_error",
-            "Certains champs sont invalides.",
-            details=[ErrorDetail(field="current_password", message="mot de passe incorrect")],
-        )
-
-    await users.update(
-        user.model_copy(update={"password_hash": hash_password(payload.new_password)})
-    )
-    return Response(status_code=204)
-
-
-async def _my_organization(user: StoredUser, organizations: OrganizationRepository) -> Organization:
-    """The user's organisation, or 404 (an admin belongs to no organisation)."""
-    organization = (
-        await organizations.get(user.organization_id) if user.organization_id is not None else None
-    )
-    if organization is None:
-        raise ApiError(404, "not_found", "Vous n'appartenez à aucune organisation.")
-    return organization
-
-
-@router.get(
-    "/me/organization",
-    response_model=Organization,
-    operation_id="getMyOrganization",
-    responses={**_UNAUTHORIZED, **_NOT_FOUND},
-)
-async def get_my_organization(user: CurrentUser, organizations: Organizations) -> Organization:
-    """Récupérer mon organisation."""
-    return await _my_organization(user, organizations)
-
-
-@router.patch(
-    "/me/organization",
-    response_model=Organization,
-    operation_id="updateMyOrganization",
-    responses={
-        **_BAD_REQUEST,
-        **_UNAUTHORIZED,
-        **_FORBIDDEN,
-        **_conflict("Le SIRET ou le n° RNA est déjà utilisé"),
-        **_VALIDATION,
-    },
-)
-async def update_my_organization(
-    payload: OrganizationUpdate, user: CurrentUser, organizations: Organizations
-) -> Organization:
-    """Modifier mon organisation (réservé au responsable)."""
-    if user.role != UserRole.MANAGER:
-        raise ApiError(403, "forbidden", "Seul le responsable peut modifier l'organisation.")
-
-    organization = await _my_organization(user, organizations)
-    changes = payload.model_dump(exclude_unset=True)
-
-    if "supplier_type" in changes and organization.type == OrganizationType.ASSOCIATION:
-        raise ApiError(
-            422,
-            "validation_error",
-            "Certains champs sont invalides.",
-            details=[
-                ErrorDetail(field="supplier_type", message="doit être null pour une association")
-            ],
-        )
-
-    new_legal_id = changes.get("legal_id")
-    if new_legal_id is not None and new_legal_id != organization.legal_id:
-        if await organizations.get_by_legal_id(new_legal_id) is not None:
-            raise ApiError(409, "conflict", "Ce SIRET ou ce n° RNA est déjà utilisé.")
-        # A new SIRET / RNA must be validated again by an admin.
-        changes["status"] = OrganizationStatus.PENDING_REVIEW
-
-    # TODO(geocoding): a new address should also update `location` once geocoding exists.
-    updated = Organization.model_validate({**organization.model_dump(), **changes})
-    return await organizations.update(updated)
