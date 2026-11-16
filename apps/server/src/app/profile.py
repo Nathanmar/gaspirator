@@ -6,13 +6,14 @@ from app.auth import hash_password, verify_password
 from app.dependencies import CurrentUser, Organizations, Users
 from app.errors import ApiError
 from app.repositories import OrganizationRepository, StoredUser
-from app.schemas import Error, ErrorDetail, Me, MeUpdate, PasswordChange
+from app.schemas import Error, ErrorDetail, Me, MeUpdate, Organization, PasswordChange
 
 router = APIRouter(tags=["Profile"])
 
 _UNAUTHORIZED = {401: {"model": Error, "description": "Token absent, invalide ou expiré"}}
 _BAD_REQUEST = {400: {"model": Error, "description": "Requête malformée"}}
 _VALIDATION = {422: {"model": Error, "description": "Contraintes de validation non respectées"}}
+_NOT_FOUND = {404: {"model": Error, "description": "Ressource introuvable"}}
 
 
 def _conflict(description: str) -> dict:
@@ -86,3 +87,24 @@ async def change_password(payload: PasswordChange, user: CurrentUser, users: Use
         user.model_copy(update={"password_hash": hash_password(payload.new_password)})
     )
     return Response(status_code=204)
+
+
+async def _my_organization(user: StoredUser, organizations: OrganizationRepository) -> Organization:
+    """The user's organisation, or 404 (an admin belongs to no organisation)."""
+    organization = (
+        await organizations.get(user.organization_id) if user.organization_id is not None else None
+    )
+    if organization is None:
+        raise ApiError(404, "not_found", "Vous n'appartenez à aucune organisation.")
+    return organization
+
+
+@router.get(
+    "/me/organization",
+    response_model=Organization,
+    operation_id="getMyOrganization",
+    responses={**_UNAUTHORIZED, **_NOT_FOUND},
+)
+async def get_my_organization(user: CurrentUser, organizations: Organizations) -> Organization:
+    """Récupérer mon organisation."""
+    return await _my_organization(user, organizations)
