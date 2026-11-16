@@ -40,7 +40,8 @@ services:
   # contract violations are reported in the `sl-violations` response header.
   prism:
     image: stoplight/prism:5.15.10
-    command: proxy -h 0.0.0.0 /contract/openapi.yaml http://app:8000/api/v1
+    # --multiprocess false: the image crashes in cluster mode (reading 'isPrimary').
+    command: proxy -h 0.0.0.0 --multiprocess false /contract/openapi.yaml http://app:8000/api/v1
     volumes:
       - ./openapi.yaml:/contract/openapi.yaml:ro
     ports:
