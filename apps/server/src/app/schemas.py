@@ -102,17 +102,33 @@ class GeoPoint(BaseModel):
     longitude: float
 
 
-class OrganizationSummary(BaseModel):
+class SupplierSummary(BaseModel):
     id: int
-    type: OrganizationType
     name: str
-    supplier_type: SupplierType | None
+    supplier_type: SupplierType
     address: Address
     location: GeoPoint
     contact_phone: str
 
 
-class Organization(OrganizationSummary):
+class Supplier(SupplierSummary):
+    """Fournisseur complet, visible par son responsable."""
+
+    legal_id: str
+    created_at: datetime
+
+
+class AssociationSummary(BaseModel):
+    id: int
+    name: str
+    address: Address
+    location: GeoPoint
+    contact_phone: str
+
+
+class Association(AssociationSummary):
+    """Association complète, visible par son responsable."""
+
     legal_id: str
     created_at: datetime
 
@@ -123,7 +139,12 @@ class Me(BaseModel):
     firstname: str
     lastname: str
     role: UserRole
-    organization: Organization | None = Field(description="Null pour un admin de la plateforme")
+    supplier: Supplier | None = Field(
+        description="Fournisseur dont l'utilisateur est responsable, null sinon"
+    )
+    association: Association | None = Field(
+        description="Association dont l'utilisateur est responsable, null sinon"
+    )
 
 
 class ErrorDetail(BaseModel):

@@ -3,22 +3,18 @@
 from datetime import UTC, datetime, timedelta
 
 import httpx2
-from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy.orm import Session
 
 from app.auth import ALGORITHM, create_access_token
-from app.models import Organization
-from app.schemas import OrganizationType, SupplierType, UserRole
+from app.models import Association, Supplier
+from app.schemas import SupplierType, UserRole
 from app.settings import get_settings
 from tests.prism import assert_contract
 
 ME_PATH = "/me"
-ME_URL = "/api/v1/me"
 
-# The contract declares `Me.organization` and `supplier_type` nullable, but writes them as
-# `nullable` + `allOf`, which Prism does not let be null. Responses with one of these null
-# are checked with the in-process `client` (as in tests/registration) until it is fixed.
+ADDRESS = {"street": "12 rue de la République", "postal_code": "69002", "city": "Lyon"}
 
 
 def _bearer(token: str) -> dict:
@@ -32,30 +28,40 @@ def _assert_unauthorized(response) -> None:
     assert isinstance(data["message"], str) and data["message"]
 
 
-def _add_organization(db: Session, **overrides) -> Organization:
-    fields = {
-        "type": OrganizationType.SUPPLIER,
-        "name": "Cantine du lycée Ampère",
-        "supplier_type": SupplierType.CANTEEN,
-        "street": "12 rue de la République",
-        "postal_code": "69002",
-        "city": "Lyon",
-        "latitude": 45.7578,
-        "longitude": 4.8320,
-        "contact_phone": "04 78 00 00 00",
-        "legal_id": "19690103400017",
-    }
-    organization = Organization(**{**fields, **overrides})
-    db.add(organization)
+def _add_supplier(db: Session) -> Supplier:
+    supplier = Supplier(
+        name="Cantine du lycée Ampère",
+        supplier_type=SupplierType.CANTEEN,
+        **ADDRESS,
+        latitude=45.7578,
+        longitude=4.8320,
+        contact_phone="04 78 00 00 00",
+        legal_id="19690103400017",
+    )
+    db.add(supplier)
     db.commit()
-    return organization
+    return supplier
 
 
-def test_me_manager(api: httpx2.Client, db: Session, create_user):
-    """A manager gets their account and their organisation (contract `Organization`)."""
-    organization = _add_organization(db)
+def _add_association(db: Session) -> Association:
+    association = Association(
+        name="Restos du Cœur Lyon 2",
+        **ADDRESS,
+        latitude=45.75,
+        longitude=4.85,
+        contact_phone="04 78 00 00 01",
+        legal_id="W691234567",
+    )
+    db.add(association)
+    db.commit()
+    return association
+
+
+def test_me_supplier_manager(api: httpx2.Client, db: Session, create_user):
+    """The manager of a supplier gets the contract `Supplier`, and no association."""
+    supplier = _add_supplier(db)
     manager = create_user()
-    manager.organization = organization
+    manager.supplier = supplier
     db.commit()
 
     response = api.get(ME_PATH, headers=_bearer(create_access_token(manager)))
@@ -69,59 +75,63 @@ def test_me_manager(api: httpx2.Client, db: Session, create_user):
         "firstname": "Marie",
         "lastname": "Dupont",
         "role": "manager",
-        "organization": {
-            "id": organization.id,
-            "type": "supplier",
+        "supplier": {
+            "id": supplier.id,
             "name": "Cantine du lycée Ampère",
             "supplier_type": "canteen",
-            "address": {
-                "street": "12 rue de la République",
-                "postal_code": "69002",
-                "city": "Lyon",
-            },
+            "address": ADDRESS,
             "location": {"latitude": 45.7578, "longitude": 4.832},
             "contact_phone": "04 78 00 00 00",
             "legal_id": "19690103400017",
-            "created_at": data["organization"]["created_at"],
+            "created_at": data["supplier"]["created_at"],
         },
+        "association": None,
     }
-    assert datetime.fromisoformat(data["organization"]["created_at"])
+    assert datetime.fromisoformat(data["supplier"]["created_at"])
 
 
-def test_me_association_manager(client: TestClient, db: Session, create_user):
-    """An association has no supplier_type (null: checked without Prism, see above)."""
-    organization = _add_organization(
-        db, type=OrganizationType.ASSOCIATION, supplier_type=None, legal_id="W691234567"
-    )
+def test_me_association_manager(api: httpx2.Client, db: Session, create_user):
+    """The manager of an association gets the contract `Association`, and no supplier."""
+    association = _add_association(db)
     manager = create_user()
-    manager.organization = organization
+    manager.association = association
     db.commit()
 
-    response = client.get(ME_URL, headers=_bearer(create_access_token(manager)))
+    response = api.get(ME_PATH, headers=_bearer(create_access_token(manager)))
 
+    assert_contract(response)
     assert response.status_code == 200
-    assert response.json()["organization"]["type"] == "association"
-    assert response.json()["organization"]["supplier_type"] is None
+    data = response.json()
+    assert data["supplier"] is None
+    assert data["association"] == {
+        "id": association.id,
+        "name": "Restos du Cœur Lyon 2",
+        "address": ADDRESS,
+        "location": {"latitude": 45.75, "longitude": 4.85},
+        "contact_phone": "04 78 00 00 01",
+        "legal_id": "W691234567",
+        "created_at": data["association"]["created_at"],
+    }
 
 
-def test_me_admin_has_no_organization(client: TestClient, create_user):
-    """An admin has no organisation (null: checked without Prism, see above)."""
+def test_me_admin(api: httpx2.Client, create_user):
+    """A platform admin manages neither a supplier nor an association."""
     admin = create_user(email="admin@gaspirator.fr", role=UserRole.ADMIN)
 
-    response = client.get(ME_URL, headers=_bearer(create_access_token(admin)))
+    response = api.get(ME_PATH, headers=_bearer(create_access_token(admin)))
 
+    assert_contract(response)
     assert response.status_code == 200
     assert response.json()["role"] == "admin"
-    assert response.json()["organization"] is None
+    assert response.json()["supplier"] is None
+    assert response.json()["association"] is None
 
 
-def test_me_with_token_from_login(client: TestClient, tokens: dict):
-    """The access token returned by POST /auth/login opens GET /me.
+def test_me_with_token_from_login(api: httpx2.Client, tokens: dict):
+    """The access token returned by POST /auth/login opens GET /me."""
+    response = api.get(ME_PATH, headers=_bearer(tokens["access_token"]))
 
-    The `tokens` manager has no organisation yet (null: checked without Prism, see above).
-    """
-    response = client.get(ME_URL, headers=_bearer(tokens["access_token"]))
-
+    assert_contract(response)
     assert response.status_code == 200
     assert response.json()["email"] == "marie.dupont@example.org"
 
