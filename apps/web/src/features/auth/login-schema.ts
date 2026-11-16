@@ -1,19 +1,19 @@
 import { z } from "zod";
 
 /**
- * Validation du formulaire de connexion, alignée sur `LoginRequest` du contrat (`openapi.yaml`).
+ * Login form validation, aligned with `LoginRequest` in the API contract (`openapi.yaml`).
  */
 export const loginSchema = z.object({
-  // Espaces retirés avant validation : les claviers mobiles en ajoutent souvent un en fin de saisie.
-  // `z.email()` via `pipe` (et non `.email()`, déprécié dans zod 4) : il ne s'exécute que si
-  // le champ est rempli, l'utilisateur ne voit donc qu'une seule erreur à la fois.
+  // Trimmed before validation: mobile keyboards often append a trailing space.
+  // `z.email()` through `pipe` (not `.email()`, deprecated in zod 4) only runs once the field
+  // is filled in, so the user sees a single error at a time.
   email: z
     .string()
     .trim()
     .min(1, "L'adresse e-mail est obligatoire.")
     .pipe(z.email("L'adresse e-mail est invalide.")),
-  // Ni trim (un espace peut faire partie du mot de passe), ni longueur minimale : le contrat
-  // n'impose 8 caractères qu'à la création de compte (`AccountCreate`), pas à la connexion.
+  // No trim (a space can be part of a password) and no minimum length: the contract only
+  // requires 8 characters when creating an account (`AccountCreate`), not when logging in.
   password: z.string().min(1, "Le mot de passe est obligatoire."),
 });
 
