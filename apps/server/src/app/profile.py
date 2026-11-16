@@ -1,11 +1,12 @@
 """US-01 / US-06: account and organisation of the logged-in user (tag `Profile`)."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 
+from app.auth import hash_password, verify_password
 from app.dependencies import CurrentUser, Organizations, Users
 from app.errors import ApiError
 from app.repositories import OrganizationRepository, StoredUser
-from app.schemas import Error, Me, MeUpdate
+from app.schemas import Error, ErrorDetail, Me, MeUpdate, PasswordChange
 
 router = APIRouter(tags=["Profile"])
 
@@ -62,3 +63,26 @@ async def update_me(
 
     updated = await users.update(user.model_copy(update=changes))
     return await _to_me(updated, organizations)
+
+
+@router.put(
+    "/me/password",
+    status_code=204,
+    response_class=Response,
+    operation_id="changePassword",
+    responses={**_BAD_REQUEST, **_UNAUTHORIZED, **_VALIDATION},
+)
+async def change_password(payload: PasswordChange, user: CurrentUser, users: Users) -> Response:
+    """Changer mon mot de passe."""
+    if not verify_password(payload.current_password, user.password_hash):
+        raise ApiError(
+            422,
+            "validation_error",
+            "Certains champs sont invalides.",
+            details=[ErrorDetail(field="current_password", message="mot de passe incorrect")],
+        )
+
+    await users.update(
+        user.model_copy(update={"password_hash": hash_password(payload.new_password)})
+    )
+    return Response(status_code=204)
