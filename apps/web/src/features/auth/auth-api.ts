@@ -21,6 +21,18 @@ export type RegistrationRequestCreate = {
   account: { firstname: string; lastname: string; email: string; password: string };
 };
 
+/** `RegistrationRequest` in the API contract. */
+export type RegistrationRequest = {
+  id: number;
+  status: "pending" | "approved" | "rejected";
+  organization: RegistrationRequestCreate["organization"];
+  account: { firstname: string; lastname: string; email: string };
+  // Organization created once the request is approved, null until then.
+  organization_id: number | null;
+  created_at: string;
+  decided_at: string | null;
+};
+
 /** `LoginRequest` in the API contract. */
 export type LoginRequest = {
   email: string;
@@ -42,4 +54,18 @@ export type AuthTokens = {
  */
 export function login(credentials: LoginRequest): Promise<AuthTokens> {
   return apiRequest<AuthTokens>("/auth/login", { method: "POST", body: credentials });
+}
+
+/**
+ * `POST /registration-requests`: creates a `pending` request for an organization and its manager.
+ * A 409 means the e-mail, SIRET or RNA number is already used; a 422 a malformed field or an
+ * address that cannot be found.
+ */
+export function createRegistrationRequest(
+  request: RegistrationRequestCreate,
+): Promise<RegistrationRequest> {
+  return apiRequest<RegistrationRequest>("/registration-requests", {
+    method: "POST",
+    body: request,
+  });
 }

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 import { Link } from "@tanstack/react-router";
 
@@ -9,6 +9,8 @@ type AuthLayoutProps = {
   // Small lime line above the title, as on the landing page.
   eyebrow: string;
   title: string;
+  // Lets a page move the focus to the title, e.g. when a confirmation replaces a long form.
+  titleRef?: Ref<HTMLHeadingElement>;
   description?: ReactNode;
   // Under the card: link to the other auth page.
   footer?: ReactNode;
@@ -22,7 +24,15 @@ type AuthLayoutProps = {
  * class brings its colour tokens (paper background, lime and tomato accents), plus its glow,
  * glass card and grain. One column on mobile; the content is centred on larger screens.
  */
-export function AuthLayout({ eyebrow, title, description, footer, wide, children }: AuthLayoutProps) {
+export function AuthLayout({
+  eyebrow,
+  title,
+  titleRef,
+  description,
+  footer,
+  wide,
+  children,
+}: AuthLayoutProps) {
   return (
     <div className="landing relative isolate flex min-h-svh flex-col bg-ink font-display text-cream">
       <div aria-hidden="true" className="landing-glow pointer-events-none fixed inset-0 -z-10" />
@@ -41,7 +51,11 @@ export function AuthLayout({ eyebrow, title, description, footer, wide, children
       <main className="flex flex-1 justify-center px-5 pt-6 pb-16 md:items-center md:px-10">
         <div className={cn("w-full", wide ? "max-w-2xl" : "max-w-md")}>
           <p className="text-sm font-semibold tracking-[0.12em] text-lime uppercase">{eyebrow}</p>
-          <h1 className="mt-3 text-5xl leading-[0.95] font-extrabold tracking-[-0.04em] md:text-6xl">
+          <h1
+            ref={titleRef}
+            tabIndex={-1}
+            className="mt-3 text-5xl leading-[0.95] font-extrabold tracking-[-0.04em] outline-none md:text-6xl"
+          >
             {title}
           </h1>
           {description && (

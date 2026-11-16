@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { FormAlert } from "@/components/form-controls";
@@ -56,6 +56,18 @@ export function LoginPage({ role }: { role?: OrganizationType }) {
       eyebrow={role ? SPACE_BY_ROLE[role] : "Connexion"}
       title="Se connecter"
       description="Retrouvez vos dons et vos réservations."
+      footer={
+        <>
+          Pas encore de compte ?{" "}
+          <Link
+            to="/register"
+            search={{ role }}
+            className="font-semibold text-cream underline underline-offset-4"
+          >
+            Créer un compte
+          </Link>
+        </>
+      }
     >
       <div className="flex flex-col gap-5">
         {error && <FormAlert>{error}</FormAlert>}
