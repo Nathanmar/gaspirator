@@ -1,6 +1,9 @@
-import type { AnimationEvent, SyntheticEvent } from "react";
+import type { AnimationEvent, ReactNode, SyntheticEvent } from "react";
 
 import { Link } from "@tanstack/react-router";
+
+import { useAuthStore } from "@/features/auth/auth-store";
+import { useLogout } from "@/features/auth/use-logout";
 
 import { NAV_LINKS } from "./content";
 import { LogoMark } from "./logo-mark";
@@ -19,7 +22,28 @@ function endSpin(event: AnimationEvent<HTMLAnchorElement>) {
   }
 }
 
+const pillClass =
+  "group rounded-full bg-lime px-5 py-2.5 font-mono text-[11px] font-semibold tracking-[0.18em] text-ink uppercase transition-colors duration-300 hover:bg-cream focus-visible:bg-cream";
+
+// On hover the label rolls up and a copy takes its place from below.
+function RollingLabel({ children }: { children: ReactNode }) {
+  return (
+    <span className="relative block overflow-hidden">
+      <span className="relative block transition-transform duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:-translate-y-full group-focus-visible:-translate-y-full motion-reduce:transition-none">
+        {children}
+        <span aria-hidden="true" className="absolute inset-x-0 top-full">
+          {children}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 export function Hud() {
+  // Logged in: the join button gives way to the logout button.
+  const isLoggedIn = useAuthStore((state) => state.tokens !== null);
+  const logOut = useLogout();
+
   return (
     <>
       <header
@@ -50,21 +74,15 @@ export function Hud() {
           ))}
         </nav>
 
-        <Link
-          to="/register"
-          data-magnetic
-          className="group rounded-full bg-lime px-5 py-2.5 font-mono text-[11px] font-semibold tracking-[0.18em] text-ink uppercase transition-colors duration-300 hover:bg-cream focus-visible:bg-cream"
-        >
-          {/* On hover the label rolls up and a copy takes its place from below. */}
-          <span className="relative block overflow-hidden">
-            <span className="relative block transition-transform duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:-translate-y-full group-focus-visible:-translate-y-full motion-reduce:transition-none">
-              Rejoindre
-              <span aria-hidden="true" className="absolute inset-x-0 top-full">
-                Rejoindre
-              </span>
-            </span>
-          </span>
-        </Link>
+        {isLoggedIn ? (
+          <button type="button" data-magnetic className={pillClass} onClick={() => void logOut()}>
+            <RollingLabel>Se déconnecter</RollingLabel>
+          </button>
+        ) : (
+          <Link to="/register" data-magnetic className={pillClass}>
+            <RollingLabel>Rejoindre</RollingLabel>
+          </Link>
+        )}
       </header>
     </>
   );

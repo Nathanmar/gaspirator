@@ -60,6 +60,8 @@ type ApiRequestOptions = {
   method: "GET" | "POST";
   // Serialized as JSON.
   body?: unknown;
+  // Access token of the logged-in user, for the routes that are not public (`security: []`).
+  accessToken?: string;
 };
 
 /**
@@ -68,12 +70,19 @@ type ApiRequestOptions = {
  * @throws {ApiError} when the API answers with an error status.
  * @throws {NetworkError} when the API cannot be reached.
  */
-export async function apiRequest<T>(path: string, { method, body }: ApiRequestOptions): Promise<T> {
+export async function apiRequest<T>(
+  path: string,
+  { method, body, accessToken }: ApiRequestOptions,
+): Promise<T> {
+  const headers = new Headers();
+  if (body !== undefined) headers.set("Content-Type", "application/json");
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+
   let response: Response;
   try {
     response = await fetch(`${env.VITE_API_URL}${path}`, {
       method,
-      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch (error) {
@@ -84,6 +93,8 @@ export async function apiRequest<T>(path: string, { method, body }: ApiRequestOp
     throw new ApiError(response.status, await readErrorBody(response));
   }
 
+  // 204 No Content (e.g. logout): there is no body to read.
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 

@@ -17,11 +17,10 @@ const SPACE_BY_ROLE: Record<OrganizationType, string> = {
   association: "Espace association",
 };
 
-// Our own texts for 401 and 403: the contract makes the 401 message deliberately vague, and the mock
-// server returns the same example body for every error.
+// The contract keeps the 401 message deliberately vague: we always show our own. Other errors (403
+// pending or rejected registration…) show the API's message, which is precise.
 const LOGIN_ERRORS = {
   401: "E-mail ou mot de passe incorrect.",
-  403: "Votre compte n'est pas encore actif : votre demande d'inscription est en attente de validation ou a été refusée.",
 };
 
 export function LoginPage({ role }: { role?: OrganizationType }) {

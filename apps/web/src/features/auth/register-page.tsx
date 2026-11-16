@@ -13,17 +13,16 @@ import {
 import { AuthLayout } from "./auth-layout";
 import { RegisterForm } from "./register-form";
 
-// Our own texts for 409 and 422, independent of the server message (the mock server returns the
-// same example body for every error).
+// The API's messages are shown as is (409 tells whether the e-mail or the SIRET / RNA number is
+// already used), except for 422: the form already checks every format, so a 422 mostly means the
+// address was not found.
 const REGISTER_ERRORS = {
-  409: "Un compte existe déjà avec cette adresse e-mail, ce SIRET ou ce n° RNA.",
-  // The form already checks every format: a 422 mostly means the address was not found.
   422: "Certaines informations ont été refusées. Vérifiez notamment que l'adresse existe.",
 };
 
 type SentRequest = { role: OrganizationType; name: string; email: string };
 
-// The confirmation repeats what was sent rather than reading the response: the mock server answers
+// The confirmation repeats what was sent rather than reading the response: the Prism mock answers
 // every request with the same fixed example.
 function summarize(payload: RegistrationRequestCreate): SentRequest {
   const role = "supplier" in payload ? "supplier" : "association";
