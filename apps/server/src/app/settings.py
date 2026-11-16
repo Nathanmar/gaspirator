@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     api_prefix: str = "/api"
     api_version: str = "v1"
 
+    # Database (PostgreSQL from docker-compose.yml)
+    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/gaspirator"
+
+    # Authentication
+    secret_key: str = "change-me-in-production"
+    access_token_ttl_seconds: int = 15 * 60
+    refresh_token_ttl_seconds: int = 30 * 24 * 60 * 60
 
 
 @lru_cache

@@ -1,5 +1,7 @@
 import type { AnimationEvent, SyntheticEvent } from "react";
 
+import { Link } from "@tanstack/react-router";
+
 import { NAV_LINKS } from "./content";
 import { LogoMark } from "./logo-mark";
 
@@ -48,8 +50,8 @@ export function Hud() {
           ))}
         </nav>
 
-        <a
-          href="#rejoindre"
+        <Link
+          to="/register"
           data-magnetic
           className="group rounded-full bg-lime px-5 py-2.5 font-mono text-[11px] font-semibold tracking-[0.18em] text-ink uppercase transition-colors duration-300 hover:bg-cream focus-visible:bg-cream"
         >
@@ -62,7 +64,7 @@ export function Hud() {
               </span>
             </span>
           </span>
-        </a>
+        </Link>
       </header>
     </>
   );

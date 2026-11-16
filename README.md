@@ -31,6 +31,8 @@ pnpm setup:server
 
 Copy `apps/server/.env.example` to `apps/server/.env` and set `SECRET_KEY` and `DATABASE_URL`.
 
+Copy `apps/web/.env.example` to `apps/web/.env`. `VITE_API_URL` is the base URL of the API contract: the Prism mock (`http://127.0.0.1:4010`, see `pnpm mock`) or the API (`http://localhost:8000/api/v1`). The web app refuses to start without it.
+
 ## Local development
 
 ```sh
@@ -45,6 +47,7 @@ This starts the web app and the API together; if one stops, the other stops too.
 | `pnpm dev:server`   | API only (FastAPI with auto-reload)          |
 | `pnpm build`        | Build the web app                            |
 | `pnpm test`         | Web tests (Vitest)                           |
+| `pnpm mock`         | Mock API from `openapi.yaml` (port 4010)     |
 | `pnpm test:server`  | API tests (pytest)                           |
 | `pnpm check:server` | Lint the API (Ruff)                          |
 
@@ -59,7 +62,13 @@ This starts the web app and the API together; if one stops, the other stops too.
 docker compose up --build
 ```
 
-Runs the web app on `http://localhost:3001` and the API on `http://localhost:8000`. Create `apps/web/.env` and `apps/server/.env` first. The compose file does not include a PostgreSQL service yet.
+Runs the web app on `http://localhost:3001` and the API on `http://localhost:8000`. Create `apps/web/.env` and `apps/server/.env` first.
+
+PostgreSQL 18 runs in the `db` service on `localhost:5432` (user `postgres`, password `postgres`, database `gaspirator`; override with `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`). Data is kept in the `db-data` volume. In compose, the API gets `DATABASE_URL` pointing to `db`. To run only the database for local dev:
+
+```sh
+docker compose up -d db
+```
 
 ## Backlog (MoSCoW)
 

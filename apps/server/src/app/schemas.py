@@ -1,38 +1,124 @@
-"""Pydantic schemas for request/response validation."""
+"""Pydantic schemas for request/response validation (see openapi.yaml)."""
 
-from pydantic import BaseModel, EmailStr, Field
+from datetime import datetime
+from enum import StrEnum
+from typing import Annotated, Literal
 
-
-# Example request/response schemas
-class ItemCreate(BaseModel):
-    """Schema for creating an item."""
-
-    name: str = Field(..., min_length=1, max_length=100, description="Item name")
-    description: str | None = Field(None, max_length=500, description="Item description")
-    price: float = Field(..., gt=0, description="Item price (must be positive)")
-    quantity: int = Field(default=1, ge=0, description="Item quantity")
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, ValidationInfo, field_validator
+from pydantic_core import PydanticCustomError
 
 
-class ItemResponse(BaseModel):
-    """Schema for item response."""
+class OrganizationType(StrEnum):
+    SUPPLIER = "supplier"
+    ASSOCIATION = "association"
 
+
+class SupplierType(StrEnum):
+    CANTEEN = "canteen"
+    HOSPITAL = "hospital"
+    SUPERMARKET = "supermarket"
+    OTHER = "other"
+
+
+class RegistrationStatus(StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class UserRole(StrEnum):
+    ADMIN = "admin"
+    MANAGER = "manager"
+
+
+class StrictModel(BaseModel):
+    """Request body model: unknown fields are rejected (additionalProperties: false)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class Address(StrictModel):
+    street: str = Field(min_length=3, max_length=255)
+    postal_code: str = Field(pattern=r"^\d{5}$")
+    city: str = Field(min_length=1, max_length=120)
+
+
+class OrganizationCreate(StrictModel):
+    type: OrganizationType
+    name: str = Field(min_length=2, max_length=255)
+    legal_id: str = Field(
+        pattern=r"^(\d{14}|W\d{9})$",
+        description="SIRET (14 chiffres) pour un fournisseur, n° RNA (W + 9 chiffres) pour une association",
+    )
+    supplier_type: SupplierType | None = Field(default=None, validate_default=True)
+    address: Address
+    contact_phone: str = Field(min_length=10, max_length=20)
+
+    @field_validator("supplier_type")
+    @classmethod
+    def supplier_type_matches_type(
+        cls, value: SupplierType | None, info: ValidationInfo
+    ) -> SupplierType | None:
+        org_type = info.data.get("type")
+        if org_type == OrganizationType.SUPPLIER and value is None:
+            raise PydanticCustomError("supplier_type_required", "obligatoire pour un fournisseur")
+        if org_type == OrganizationType.ASSOCIATION and value is not None:
+            raise PydanticCustomError(
+                "supplier_type_forbidden", "doit être null pour une association"
+            )
+        return value
+
+
+class AccountCreate(StrictModel):
+    firstname: str = Field(min_length=1, max_length=255)
+    lastname: str = Field(min_length=1, max_length=255)
+    email: Annotated[EmailStr, Field(max_length=255)]
+    password: str = Field(min_length=8, max_length=128)
+
+
+class AccountSummary(BaseModel):
+    firstname: str
+    lastname: str
+    email: EmailStr
+
+
+class RegistrationRequestCreate(StrictModel):
+    organization: OrganizationCreate
+    account: AccountCreate
+
+
+class RegistrationRequest(BaseModel):
     id: int
-    name: str
-    description: str | None
-    price: float
-    quantity: int
+    status: RegistrationStatus
+    organization: OrganizationCreate
+    account: AccountSummary
+    organization_id: int | None
+    created_at: datetime
+    decided_at: datetime | None
 
 
-class MessageCreate(BaseModel):
-    """Schema for creating a message."""
-
-    email: EmailStr = Field(..., description="Sender email address")
-    subject: str = Field(..., min_length=1, max_length=200, description="Message subject")
-    content: str = Field(..., min_length=1, description="Message content")
-
-
-class MessageResponse(BaseModel):
-    """Schema for message response."""
-
-    success: bool
+class ErrorDetail(BaseModel):
+    field: str
     message: str
+
+
+class Error(BaseModel):
+    code: str
+    message: str
+    details: list[ErrorDetail] | None = None
+
+
+class LoginRequest(StrictModel):
+    email: EmailStr
+    password: str
+
+
+class RefreshRequest(StrictModel):
+    refresh_token: str
+
+
+class AuthTokens(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: Literal["Bearer"] = "Bearer"
+    expires_in: int = Field(description="Durée de validité du token d'accès en secondes")
