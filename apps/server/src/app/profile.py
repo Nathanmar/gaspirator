@@ -2,13 +2,20 @@
 
 from fastapi import APIRouter
 
-from app.dependencies import CurrentUser, Organizations
+from app.dependencies import CurrentUser, Organizations, Users
+from app.errors import ApiError
 from app.repositories import OrganizationRepository, StoredUser
-from app.schemas import Error, Me
+from app.schemas import Error, Me, MeUpdate
 
 router = APIRouter(tags=["Profile"])
 
 _UNAUTHORIZED = {401: {"model": Error, "description": "Token absent, invalide ou expiré"}}
+_BAD_REQUEST = {400: {"model": Error, "description": "Requête malformée"}}
+_VALIDATION = {422: {"model": Error, "description": "Contraintes de validation non respectées"}}
+
+
+def _conflict(description: str) -> dict:
+    return {409: {"model": Error, "description": description}}
 
 
 async def _to_me(user: StoredUser, organizations: OrganizationRepository) -> Me:
@@ -29,3 +36,29 @@ async def _to_me(user: StoredUser, organizations: OrganizationRepository) -> Me:
 async def get_me(user: CurrentUser, organizations: Organizations) -> Me:
     """Récupérer l'utilisateur connecté."""
     return await _to_me(user, organizations)
+
+
+@router.patch(
+    "/me",
+    response_model=Me,
+    operation_id="updateMe",
+    responses={
+        **_BAD_REQUEST,
+        **_UNAUTHORIZED,
+        **_conflict("Le nouvel e-mail est déjà utilisé"),
+        **_VALIDATION,
+    },
+)
+async def update_me(
+    payload: MeUpdate, user: CurrentUser, users: Users, organizations: Organizations
+) -> Me:
+    """Modifier mon compte."""
+    changes = payload.model_dump(exclude_unset=True)
+
+    if "email" in changes:
+        owner = await users.get_by_email(changes["email"])
+        if owner is not None and owner.id != user.id:
+            raise ApiError(409, "conflict", "Cette adresse e-mail est déjà utilisée.")
+
+    updated = await users.update(user.model_copy(update=changes))
+    return await _to_me(updated, organizations)
