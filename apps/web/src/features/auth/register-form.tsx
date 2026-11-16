@@ -187,7 +187,7 @@ function AccountStep({ defaultValues, focusTitle, onContinue }: AccountStepProps
 type OrganizationStepProps = {
   defaultValues: OrganizationValues;
   focusTitle: boolean;
-  error?: string | null;
+  error?: ReactNode;
   // Receives the current values so they are kept when coming back to this step.
   onBack: (organization: OrganizationValues) => void;
   onSubmit: (organization: OrganizationValues) => void | Promise<void>;
@@ -353,7 +353,7 @@ type RegisterFormProps = {
   // Organization type chosen on the landing page, preselected in step 2.
   defaultType?: OrganizationType;
   // Error of the whole request, shown in step 2 next to the submit button.
-  error?: string | null;
+  error?: ReactNode;
   // While the returned promise is pending, the submit button is disabled.
   onSubmit: (request: RegistrationRequestCreate) => void | Promise<void>;
 };
