@@ -8,9 +8,9 @@ info:
 
         - **Authentification** : token Bearer obtenu avec `POST /auth/login`. Les routes
           publiques déclarent `security: []`.
-        - **Rôles** : `admin` (plateforme) et `manager` (responsable d'une organisation). Le
-          type de l'organisation (`supplier` ou `association`) détermine les actions possibles.
-        - **Préfixes** : `/me/...` désigne l'utilisateur connecté et son organisation,
+        - **Rôles** : `admin` (plateforme) et `manager` (responsable d'un fournisseur ou d'une
+          association). Fournisseur ou association détermine les actions possibles.
+        - **Préfixes** : `/me/...` désigne l'utilisateur connecté et son fournisseur ou son association,
           `/admin/...` est réservé aux admins.
         - **Formats** : propriétés en snake_case, dates et heures en ISO 8601 (UTC).
         - **Pagination** : paramètres `page` et `per_page`, réponse `{ data, meta }`.
@@ -24,7 +24,7 @@ tags:
     - name: Auth
       description: Connexion et session (US-01)
     - name: Registration
-      description: Demandes d'inscription des organisations (US-01)
+      description: Demandes d'inscription des fournisseurs et des associations (US-01)
     - name: Lots
       description: Lots publiés par les fournisseurs (US-02, US-04)
     - name: Suppliers
@@ -41,7 +41,7 @@ paths:
             tags: [Registration]
             summary: Envoyer une demande d'inscription
             description: |
-                US-01. Crée une demande au statut `pending` pour une organisation et le compte
+                US-01. Crée une demande au statut `pending` pour un fournisseur ou une association et le compte
                 de son responsable. L'adresse est géocodée à l'envoi. Le compte ne peut pas se
                 connecter tant que la demande n'est pas acceptée par un admin.
 
@@ -134,7 +134,7 @@ paths:
             summary: Récupérer l'utilisateur connecté
             description: |
                 US-01. Utilisé au démarrage des applications pour savoir sur quel espace envoyer
-                l'utilisateur, selon son rôle et le type de son organisation.
+                l'utilisateur, selon son rôle et selon qu'il gère un fournisseur ou une association.
             operationId: getMe
             responses:
                 "200":
@@ -169,7 +169,7 @@ paths:
             tags: [Admin]
             summary: Accepter une demande d'inscription
             description: |
-                US-01. Crée l'organisation et active le compte du responsable, qui est prévenu
+                US-01. Crée le fournisseur ou l'association et active le compte du responsable, qui est prévenu
                 par e-mail. 409 si la demande a déjà été traitée.
             operationId: approveRegistrationRequest
             responses:
@@ -270,7 +270,7 @@ paths:
                     description: OK
                     content:
                         application/json:
-                            schema: { $ref: "#/components/schemas/Supplier" }
+                            schema: { $ref: "#/components/schemas/SupplierProfile" }
                 "401": { $ref: "#/components/responses/Unauthorized" }
                 "404": { $ref: "#/components/responses/NotFound" }
 
@@ -512,9 +512,6 @@ components:
 
     schemas:
         # ----- Énumérations -----
-        OrganizationType:
-            type: string
-            enum: [supplier, association]
         SupplierType:
             type: string
             description: Type d'établissement d'un fournisseur
@@ -524,7 +521,7 @@ components:
             enum: [pending, approved, rejected]
         UserRole:
             type: string
-            description: "`admin` : admin de la plateforme. `manager` : responsable d'une organisation."
+            description: "`admin` : admin de la plateforme. `manager` : responsable d'un fournisseur ou d'une association."
             enum: [admin, manager]
         LotCategory:
             type: string
@@ -593,57 +590,47 @@ components:
                 latitude: { type: number, format: double, readOnly: true, example: 45.7578 }
                 longitude: { type: number, format: double, readOnly: true, example: 4.8320 }
 
-        # ----- Organisations -----
-        OrganizationCreate:
+        # ----- Fournisseurs et associations -----
+        SupplierCreate:
             type: object
-            required: [type, name, legal_id, address, contact_phone]
+            required: [name, legal_id, supplier_type, address, contact_phone]
             additionalProperties: false
             properties:
-                type: { $ref: "#/components/schemas/OrganizationType" }
                 name: { type: string, minLength: 2, maxLength: 255, example: "Cantine du lycée Ampère" }
                 legal_id:
                     type: string
-                    description: SIRET (14 chiffres) pour un fournisseur, n° RNA (W suivi de 9 chiffres) pour une association
-                    pattern: '^(\d{14}|W\d{9})$'
+                    description: SIRET (14 chiffres)
+                    pattern: '^\d{14}$'
                     example: "19690103400017"
-                supplier_type:
-                    type: string
-                    allOf:
-                        - $ref: "#/components/schemas/SupplierType"
-                    nullable: true
-                    description: Obligatoire pour un fournisseur, null pour une association
+                supplier_type: { $ref: "#/components/schemas/SupplierType" }
                 address: { $ref: "#/components/schemas/Address" }
                 contact_phone: { type: string, minLength: 10, maxLength: 20, example: "04 78 00 00 00" }
 
-        OrganizationSummary:
+        SupplierSummary:
             type: object
-            description: Informations d'une organisation visibles par les autres organisations
-            required: [id, type, name, supplier_type, address, location, contact_phone]
+            description: Informations d'un fournisseur visibles par les associations
+            required: [id, name, supplier_type, address, location, contact_phone]
             properties:
                 id: { type: integer, format: int64, readOnly: true, example: 3 }
-                type: { $ref: "#/components/schemas/OrganizationType" }
                 name: { type: string, example: "Cantine du lycée Ampère" }
-                supplier_type:
-                    type: string
-                    allOf:
-                        - $ref: "#/components/schemas/SupplierType"
-                    nullable: true
+                supplier_type: { $ref: "#/components/schemas/SupplierType" }
                 address: { $ref: "#/components/schemas/Address" }
                 location: { $ref: "#/components/schemas/GeoPoint" }
                 contact_phone: { type: string, example: "04 78 00 00 00" }
 
-        Organization:
+        Supplier:
+            description: Fournisseur complet, visible par son responsable
             allOf:
-                - $ref: "#/components/schemas/OrganizationSummary"
+                - $ref: "#/components/schemas/SupplierSummary"
                 - type: object
                   required: [legal_id, created_at]
                   properties:
                       legal_id: { type: string, example: "19690103400017" }
                       created_at: { type: string, format: date-time, readOnly: true }
 
-        Supplier:
+        SupplierProfile:
             allOf:
-                - $ref: "#/components/schemas/OrganizationSummary"
+                - $ref: "#/components/schemas/SupplierSummary"
                 - type: object
                   required: [available_lots_count]
                   properties:
@@ -651,12 +638,47 @@ components:
 
         SupplierSearchResult:
             allOf:
-                - $ref: "#/components/schemas/OrganizationSummary"
+                - $ref: "#/components/schemas/SupplierSummary"
                 - type: object
                   required: [distance_km, available_lots_count]
                   properties:
                       distance_km: { type: number, format: double, readOnly: true, example: 1.8 }
                       available_lots_count: { type: integer, minimum: 1, readOnly: true, example: 2 }
+
+        AssociationCreate:
+            type: object
+            required: [name, legal_id, address, contact_phone]
+            additionalProperties: false
+            properties:
+                name: { type: string, minLength: 2, maxLength: 255, example: "Restos du Cœur Lyon 2" }
+                legal_id:
+                    type: string
+                    description: N° RNA (W suivi de 9 chiffres)
+                    pattern: '^W\d{9}$'
+                    example: "W691234567"
+                address: { $ref: "#/components/schemas/Address" }
+                contact_phone: { type: string, minLength: 10, maxLength: 20, example: "04 78 00 00 01" }
+
+        AssociationSummary:
+            type: object
+            description: Informations d'une association visibles par les fournisseurs
+            required: [id, name, address, location, contact_phone]
+            properties:
+                id: { type: integer, format: int64, readOnly: true, example: 7 }
+                name: { type: string, example: "Restos du Cœur Lyon 2" }
+                address: { $ref: "#/components/schemas/Address" }
+                location: { $ref: "#/components/schemas/GeoPoint" }
+                contact_phone: { type: string, example: "04 78 00 00 01" }
+
+        Association:
+            description: Association complète, visible par son responsable
+            allOf:
+                - $ref: "#/components/schemas/AssociationSummary"
+                - type: object
+                  required: [legal_id, created_at]
+                  properties:
+                      legal_id: { type: string, example: "W691234567" }
+                      created_at: { type: string, format: date-time, readOnly: true }
 
         # ----- Inscription -----
         AccountCreate:
@@ -678,30 +700,55 @@ components:
                 email: { type: string, format: email, example: marie.dupont@example.org }
 
         RegistrationRequestCreate:
+            description: Inscription d'un fournisseur ou d'une association, avec le compte de son responsable
+            oneOf:
+                - $ref: "#/components/schemas/SupplierRegistrationCreate"
+                - $ref: "#/components/schemas/AssociationRegistrationCreate"
+
+        SupplierRegistrationCreate:
             type: object
-            required: [organization, account]
+            required: [supplier, account]
             additionalProperties: false
             properties:
-                organization: { $ref: "#/components/schemas/OrganizationCreate" }
-                account:
-                    allOf:
-                        - $ref: "#/components/schemas/AccountCreate"
-                    description: Compte du responsable de l'organisation
+                supplier: { $ref: "#/components/schemas/SupplierCreate" }
+                account: { $ref: "#/components/schemas/AccountCreate" }
+
+        AssociationRegistrationCreate:
+            type: object
+            required: [association, account]
+            additionalProperties: false
+            properties:
+                association: { $ref: "#/components/schemas/AssociationCreate" }
+                account: { $ref: "#/components/schemas/AccountCreate" }
 
         RegistrationRequest:
             type: object
-            required: [id, status, organization, account, organization_id, created_at, decided_at]
+            description: "`supplier` ou `association` est rempli selon ce qui a été demandé, l'autre est null"
+            required: [id, status, supplier, association, account, supplier_id, association_id, created_at, decided_at]
             properties:
                 id: { type: integer, format: int64, readOnly: true, example: 18 }
                 status: { $ref: "#/components/schemas/RegistrationStatus" }
-                organization: { $ref: "#/components/schemas/OrganizationCreate" }
+                supplier:
+                    nullable: true
+                    anyOf:
+                        - $ref: "#/components/schemas/SupplierCreate"
+                association:
+                    nullable: true
+                    anyOf:
+                        - $ref: "#/components/schemas/AssociationCreate"
                 account: { $ref: "#/components/schemas/AccountSummary" }
-                organization_id:
+                supplier_id:
                     type: integer
                     format: int64
                     nullable: true
                     readOnly: true
-                    description: Organisation créée à l'acceptation, null sinon
+                    description: Fournisseur créé à l'acceptation, null sinon
+                association_id:
+                    type: integer
+                    format: int64
+                    nullable: true
+                    readOnly: true
+                    description: Association créée à l'acceptation, null sinon
                 created_at: { type: string, format: date-time, readOnly: true }
                 decided_at: { type: string, format: date-time, nullable: true, readOnly: true }
 
@@ -732,19 +779,23 @@ components:
 
         Me:
             type: object
-            required: [id, email, firstname, lastname, role, organization]
+            required: [id, email, firstname, lastname, role, supplier, association]
             properties:
                 id: { type: integer, format: int64, readOnly: true, example: 5 }
                 email: { type: string, format: email, example: marie.dupont@example.org }
                 firstname: { type: string, example: Marie }
                 lastname: { type: string, example: Dupont }
                 role: { $ref: "#/components/schemas/UserRole" }
-                organization:
-                    type: object
-                    allOf:
-                        - $ref: "#/components/schemas/Organization"
+                supplier:
                     nullable: true
-                    description: Null pour un admin de la plateforme
+                    anyOf:
+                        - $ref: "#/components/schemas/Supplier"
+                    description: Fournisseur dont l'utilisateur est responsable, null sinon
+                association:
+                    nullable: true
+                    anyOf:
+                        - $ref: "#/components/schemas/Association"
+                    description: Association dont l'utilisateur est responsable, null sinon
 
         # ----- Lots -----
         LotCreate:
@@ -784,7 +835,7 @@ components:
                 [id, supplier, title, category, quantity, remaining_quantity, unit, divisible, use_by_date, allergens, storage, pickup_start, pickup_end, status, created_at]
             properties:
                 id: { type: integer, format: int64, readOnly: true, example: 41 }
-                supplier: { $ref: "#/components/schemas/OrganizationSummary" }
+                supplier: { $ref: "#/components/schemas/SupplierSummary" }
                 title: { type: string, example: "Hachis parmentier" }
                 category: { $ref: "#/components/schemas/LotCategory" }
                 quantity: { type: number, example: 30 }
@@ -819,7 +870,7 @@ components:
                 storage: { $ref: "#/components/schemas/Storage" }
                 pickup_start: { type: string, format: date-time }
                 pickup_end: { type: string, format: date-time }
-                supplier: { $ref: "#/components/schemas/OrganizationSummary" }
+                supplier: { $ref: "#/components/schemas/SupplierSummary" }
 
         LotList:
             type: object
@@ -856,7 +907,7 @@ components:
             properties:
                 id: { type: integer, format: int64, readOnly: true, example: 3 }
                 lot: { $ref: "#/components/schemas/LotSummary" }
-                association: { $ref: "#/components/schemas/OrganizationSummary" }
+                association: { $ref: "#/components/schemas/AssociationSummary" }
                 quantity: { type: number, example: 12 }
                 pickup_at: { type: string, format: date-time, example: "2026-11-03T14:15:00Z" }
                 status: { $ref: "#/components/schemas/ReservationStatus" }
@@ -961,7 +1012,7 @@ components:
                 application/json:
                     schema: { $ref: "#/components/schemas/Error" }
         Forbidden:
-            description: Action interdite pour ce rôle, ce type d'organisation ou cette ressource
+            description: Action interdite pour ce rôle, pour un fournisseur ou une association, ou pour cette ressource
             content:
                 application/json:
                     schema: { $ref: "#/components/schemas/Error" }

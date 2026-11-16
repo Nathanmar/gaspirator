@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, ValidationInfo, field_validator
 from pydantic_core import PydanticCustomError
@@ -24,6 +24,11 @@ class RegistrationStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
+
+
+class UserRole(StrEnum):
+    ADMIN = "admin"
+    MANAGER = "manager"
 
 
 class StrictModel(BaseModel):
@@ -101,3 +106,19 @@ class Error(BaseModel):
     code: str
     message: str
     details: list[ErrorDetail] | None = None
+
+
+class LoginRequest(StrictModel):
+    email: EmailStr
+    password: str
+
+
+class RefreshRequest(StrictModel):
+    refresh_token: str
+
+
+class AuthTokens(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: Literal["Bearer"] = "Bearer"
+    expires_in: int = Field(description="Durée de validité du token d'accès en secondes")

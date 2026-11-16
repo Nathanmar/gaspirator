@@ -10,6 +10,27 @@ Install dependencies:
 uv sync --extra dev
 ```
 
+Start PostgreSQL (from the repository root) and apply the migrations:
+
+```sh
+docker compose up -d db
+uv run alembic upgrade head
+```
+
+The database URL comes from `DATABASE_URL` (default:
+`postgresql+psycopg://postgres:postgres@localhost:5432/gaspirator`). After changing
+`app/models.py`, generate a migration with `uv run alembic revision --autogenerate -m "..."`.
+
+Run the tests (they create and migrate a `gaspirator_test` database in the same server,
+override it with `TEST_DATABASE_URL`):
+
+```sh
+uv run pytest
+```
+
+Tests are grouped by contract tag, one folder per tag (`tests/auth/`, `tests/registration/`,
+then `tests/lots/`...), one file per operation, with a section per status code.
+
 Run the application:
 
 ```sh

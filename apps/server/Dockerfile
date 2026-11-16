@@ -25,4 +25,5 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 EXPOSE 8000
 
-CMD ["python", "-m", "app.main"]
+# Apply database migrations, then start the API.
+CMD ["sh", "-c", "alembic upgrade head && python -m app.main"]

@@ -36,18 +36,59 @@ def _message(error: dict) -> str:
     return "valeur invalide"
 
 
-async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+_UNAUTHORIZED_HEADERS = {"WWW-Authenticate": "Bearer"}
+
+# Operations whose contract has no 422 response: invalid fields are a 400 (`BadRequest`
+# covers "paramètre incorrect").
+_BAD_REQUEST_ON_VALIDATION = {"refreshToken", "logout"}
+
+
+class ApiError(Exception):
+    """An error answered in the contract `Error` format."""
+
+    def __init__(self, status_code: int, code: str, message: str) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.code = code
+        self.message = message
+
+
+def unauthorized(message: str) -> ApiError:
+    return ApiError(401, "unauthorized", message)
+
+
+def forbidden(message: str) -> ApiError:
+    return ApiError(403, "forbidden", message)
+
+
+async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
+    body = Error(code=exc.code, message=exc.message)
+    headers = _UNAUTHORIZED_HEADERS if exc.status_code == 401 else None
+    return JSONResponse(
+        status_code=exc.status_code, content=body.model_dump(exclude_none=True), headers=headers
+    )
+
+
+def _details(exc: RequestValidationError) -> list[ErrorDetail]:
+    return [
+        ErrorDetail(field=_field(tuple(err["loc"])), message=_message(err)) for err in exc.errors()
+    ]
+
+
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     """400 if the JSON body is malformed, 422 for field-level validation errors."""
     if any(err["type"] == "json_invalid" for err in exc.errors()):
         body = Error(code="bad_request", message="Le corps de la requête n'est pas un JSON valide.")
         return JSONResponse(status_code=400, content=body.model_dump(exclude_none=True))
 
+    route = request.scope.get("route")
+    if getattr(route, "operation_id", None) in _BAD_REQUEST_ON_VALIDATION:
+        body = Error(code="bad_request", message="Paramètres incorrects.", details=_details(exc))
+        return JSONResponse(status_code=400, content=body.model_dump())
+
     body = Error(
-        code="validation_error",
-        message="Certains champs sont invalides.",
-        details=[
-            ErrorDetail(field=_field(tuple(err["loc"])), message=_message(err))
-            for err in exc.errors()
-        ],
+        code="validation_error", message="Certains champs sont invalides.", details=_details(exc)
     )
     return JSONResponse(status_code=422, content=body.model_dump())
