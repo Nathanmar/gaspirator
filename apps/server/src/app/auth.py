@@ -16,6 +16,11 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode()[:72], bcrypt.gensalt()).decode()
 
 
+def verify_password(password: str, password_hash: str) -> bool:
+    """Check a password against a bcrypt hash made by `hash_password`."""
+    return bcrypt.checkpw(password.encode()[:72], password_hash.encode())
+
+
 def create_access_token(data: dict[str, object], expires_delta: timedelta | None = None) -> str:
     """Create a JWT access token using python-jose."""
     to_encode = data.copy()

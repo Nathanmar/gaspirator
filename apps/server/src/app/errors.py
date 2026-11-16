@@ -17,7 +17,33 @@ _MESSAGES: dict[str, str] = {
     "model_type": "doit être un objet",
     "model_attributes_type": "doit être un objet",
     "dict_type": "doit être un objet",
+    "min_properties": "au moins un champ doit être renseigné",
 }
+
+
+class ApiError(Exception):
+    """An error returned to the client in the `Error` format of the contract."""
+
+    def __init__(
+        self,
+        status_code: int,
+        code: str,
+        message: str,
+        details: list[ErrorDetail] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.error = Error(code=code, message=message, details=details)
+
+
+async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
+    """Any `ApiError` raised by a route: status code + `Error` body."""
+    headers = {"WWW-Authenticate": "Bearer"} if exc.status_code == 401 else None
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=exc.error.model_dump(exclude_none=True),
+        headers=headers,
+    )
 
 
 def _field(loc: tuple[int | str, ...]) -> str:

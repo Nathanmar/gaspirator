@@ -4,7 +4,15 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, ValidationInfo, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
 
@@ -90,6 +98,94 @@ class RegistrationRequest(BaseModel):
     organization_id: int | None
     created_at: datetime
     decided_at: datetime | None
+
+
+# ----- Profil (US-01, US-06) -----
+
+
+class OrganizationStatus(StrEnum):
+    ACTIVE = "active"
+    PENDING_REVIEW = "pending_review"
+    SUSPENDED = "suspended"
+
+
+class UserRole(StrEnum):
+    ADMIN = "admin"
+    MANAGER = "manager"
+    MEMBER = "member"
+
+
+class GeoPoint(BaseModel):
+    latitude: float
+    longitude: float
+
+
+class Organization(BaseModel):
+    """`Organization` of the contract (also the shape stored until the database is wired)."""
+
+    id: int
+    type: OrganizationType
+    name: str
+    supplier_type: SupplierType | None
+    address: Address
+    location: GeoPoint
+    contact_phone: str
+    legal_id: str
+    opening_hours: str | None
+    status: OrganizationStatus
+    suspension_reason: str | None = None
+    created_at: datetime
+
+
+class Me(BaseModel):
+    id: int
+    email: EmailStr
+    firstname: str
+    lastname: str
+    role: UserRole
+    organization: Organization | None
+
+
+def _at_least_one_field(model: BaseModel) -> BaseModel:
+    """minProperties: 1."""
+    if not model.model_fields_set:
+        raise PydanticCustomError("min_properties", "au moins un champ doit être renseigné")
+    return model
+
+
+# In the update bodies below, a field may be omitted but not sent as null (except
+# `opening_hours`, nullable in the contract): the type is not optional, only the default.
+
+
+class MeUpdate(StrictModel):
+    firstname: str = Field(default=None, min_length=1, max_length=255)
+    lastname: str = Field(default=None, min_length=1, max_length=255)
+    email: Annotated[EmailStr, Field(max_length=255)] = None
+
+    @model_validator(mode="after")
+    def check_not_empty(self) -> "MeUpdate":
+        return _at_least_one_field(self)
+
+
+class PasswordChange(StrictModel):
+    current_password: str
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class OrganizationUpdate(StrictModel):
+    name: str = Field(default=None, min_length=2, max_length=255)
+    legal_id: str = Field(default=None, pattern=r"^(\d{14}|W\d{9})$")
+    supplier_type: SupplierType = None
+    address: Address = None
+    contact_phone: str = Field(default=None, min_length=10, max_length=20)
+    opening_hours: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def check_not_empty(self) -> "OrganizationUpdate":
+        return _at_least_one_field(self)
+
+
+# ----- Erreurs -----
 
 
 class ErrorDetail(BaseModel):
