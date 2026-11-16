@@ -33,9 +33,8 @@ TEST_DATABASE_URL = os.getenv(
 
 REGISTRATION_URL = "/api/v1/registration-requests"
 
-VALID_REGISTRATION = {
-    "organization": {
-        "type": "supplier",
+VALID_SUPPLIER_REGISTRATION = {
+    "supplier": {
         "name": "Cantine du lycée Ampère",
         "legal_id": "19690103400017",
         "supplier_type": "canteen",
@@ -50,6 +49,25 @@ VALID_REGISTRATION = {
         "firstname": "Marie",
         "lastname": "Dupont",
         "email": "marie.dupont@example.org",
+        "password": "testPass1.",
+    },
+}
+
+VALID_ASSOCIATION_REGISTRATION = {
+    "association": {
+        "name": "Restos du Cœur Lyon 2",
+        "legal_id": "W691234567",
+        "address": {
+            "street": "3 rue Sainte-Hélène",
+            "postal_code": "69002",
+            "city": "Lyon",
+        },
+        "contact_phone": "04 78 00 00 01",
+    },
+    "account": {
+        "firstname": "Paul",
+        "lastname": "Martin",
+        "email": "paul.martin@example.org",
         "password": "testPass1.",
     },
 }
@@ -141,8 +159,14 @@ def api(prism_url: str, session_factory: sessionmaker[Session]) -> Iterator[http
 
 @pytest.fixture
 def registration() -> dict:
-    """A valid registration request body (deep copy, safe to mutate)."""
-    return copy.deepcopy(VALID_REGISTRATION)
+    """A valid supplier registration request body (deep copy, safe to mutate)."""
+    return copy.deepcopy(VALID_SUPPLIER_REGISTRATION)
+
+
+@pytest.fixture
+def association_registration() -> dict:
+    """A valid association registration request body (deep copy, safe to mutate)."""
+    return copy.deepcopy(VALID_ASSOCIATION_REGISTRATION)
 
 
 @pytest.fixture
