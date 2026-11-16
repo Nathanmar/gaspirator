@@ -155,15 +155,18 @@ export function ChoiceField<T extends string>({
 export function SubmitButton({
   pending = false,
   pendingLabel,
+  className,
   children,
 }: {
   pending?: boolean;
   // Replaces the label while the request is running, e.g. "Connexion…".
   pendingLabel?: string;
+  // Full width by default; overrides such as a shorter width go here.
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <button type="submit" disabled={pending} className={primaryButtonClass}>
+    <button type="submit" disabled={pending} className={cn(primaryButtonClass, className)}>
       {pending && pendingLabel ? pendingLabel : children}
       <span
         aria-hidden="true"

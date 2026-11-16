@@ -196,8 +196,10 @@ function AccountStep({ defaultValues, focusTitle, onContinue }: AccountStepProps
         )}
       </form.Field>
 
-      <div className="mt-3">
-        <SubmitButton>Continuer</SubmitButton>
+      {/* An intermediate step: a shorter button than the final "Envoyer ma demande", on the right
+          like a "next" action. */}
+      <div className="mt-3 flex justify-end">
+        <SubmitButton className="w-auto min-w-52">Continuer</SubmitButton>
       </div>
     </StepForm>
   );
