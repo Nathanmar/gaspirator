@@ -17,7 +17,27 @@ _MESSAGES: dict[str, str] = {
     "model_type": "doit être un objet",
     "model_attributes_type": "doit être un objet",
     "dict_type": "doit être un objet",
+    "list_type": "doit être une liste",
+    "bool_type": "doit être un booléen",
+    "bool_parsing": "doit être un booléen",
+    "greater_than": "doit être supérieur à {gt}",
+    "decimal_type": "doit être un nombre",
+    "decimal_parsing": "doit être un nombre",
+    "decimal_max_places": "doit avoir au plus {decimal_places} décimale(s)",
+    "decimal_max_digits": "doit avoir au plus {max_digits} chiffre(s)",
+    "decimal_whole_digits": "doit avoir au plus {whole_digits} chiffre(s) avant la virgule",
+    "date_type": "doit être une date (AAAA-MM-JJ)",
+    "date_parsing": "doit être une date (AAAA-MM-JJ)",
+    "date_from_datetime_parsing": "doit être une date (AAAA-MM-JJ)",
+    "date_from_datetime_inexact": "doit être une date (AAAA-MM-JJ)",
+    "datetime_type": "doit être une date et heure ISO 8601",
+    "datetime_parsing": "doit être une date et heure ISO 8601",
+    "datetime_from_date_parsing": "doit être une date et heure ISO 8601",
+    "timezone_aware": "doit préciser le fuseau horaire (ex. 2026-11-03T13:00:00Z)",
 }
+
+# Business-rule errors raised with `PydanticCustomError`: their message is already French.
+_CUSTOM_ERROR_PREFIXES = ("supplier_type_", "lot_")
 
 
 def _field(loc: tuple[int | str, ...]) -> str:
@@ -31,7 +51,7 @@ def _message(error: dict) -> str:
         return _MESSAGES[error_type].format(**error.get("ctx", {}))
     if error_type == "value_error" and error["loc"] and error["loc"][-1] == "email":
         return "adresse e-mail invalide"
-    if error_type.startswith(("supplier_type_",)):
+    if error_type.startswith(_CUSTOM_ERROR_PREFIXES):
         return error["msg"]
     return "valeur invalide"
 

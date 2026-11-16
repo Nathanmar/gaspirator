@@ -1,10 +1,20 @@
 """Pydantic schemas for request/response validation (see openapi.yaml)."""
 
-from datetime import datetime
+from datetime import UTC, date, datetime, time, timedelta
+from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, ValidationInfo, field_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+)
 from pydantic_core import PydanticCustomError
 
 
@@ -162,6 +172,87 @@ class RegistrationRequest(BaseModel):
     organization_id: int | None
     created_at: datetime
     decided_at: datetime | None
+
+
+# ----- Lots -----
+
+
+def _utc_today() -> date:
+    return datetime.now(UTC).date()
+
+
+class LotCreate(StrictModel):
+    title: str = Field(min_length=3, max_length=120)
+    category: LotCategory
+    quantity: Decimal = Field(gt=0, max_digits=12, decimal_places=3)
+    unit: QuantityUnit
+    divisible: bool = True
+    use_by_date: date = Field(description="Date limite de consommation (DLC)")
+    allergens: list[Allergen] = Field(default_factory=list)
+    storage: Storage
+    pickup_start: AwareDatetime
+    pickup_end: AwareDatetime
+
+    @field_validator("use_by_date")
+    @classmethod
+    def use_by_date_not_passed(cls, value: date) -> date:
+        if value < _utc_today():
+            raise PydanticCustomError(
+                "lot_use_by_date_passed", "doit être aujourd'hui ou plus tard"
+            )
+        return value
+
+    @field_validator("allergens")
+    @classmethod
+    def allergens_unique(cls, value: list[Allergen]) -> list[Allergen]:
+        if len(set(value)) != len(value):
+            raise PydanticCustomError("lot_allergens_duplicated", "ne doit pas contenir de doublon")
+        return value
+
+    @field_validator("pickup_end")
+    @classmethod
+    def pickup_window(cls, value: datetime, info: ValidationInfo) -> datetime:
+        start, use_by_date = info.data.get("pickup_start"), info.data.get("use_by_date")
+        if start is not None and value <= start:
+            raise PydanticCustomError("lot_pickup_end_before_start", "doit être après pickup_start")
+        if use_by_date is not None:
+            end_of_use_by_day = datetime.combine(use_by_date + timedelta(days=1), time(), UTC)
+            if value > end_of_use_by_day:
+                raise PydanticCustomError(
+                    "lot_pickup_end_after_use_by_date",
+                    "doit être au plus tard à la fin du jour de la DLC",
+                )
+        return value
+
+
+def _to_utc(value: datetime) -> datetime:
+    return value.astimezone(UTC)
+
+
+class Lot(BaseModel):
+    id: int
+    supplier: SupplierSummary
+    title: str
+    category: LotCategory
+    quantity: float
+    remaining_quantity: float
+    unit: QuantityUnit
+    divisible: bool
+    use_by_date: date
+    allergens: list[Allergen]
+    storage: Storage
+    pickup_start: datetime
+    pickup_end: datetime
+    status: LotStatus
+    created_at: datetime
+
+    @field_serializer("pickup_start", "pickup_end", "created_at")
+    def _serialize_utc(self, value: datetime) -> datetime:
+        """Date-times are answered in UTC, whatever the time zone of the database session."""
+        return _to_utc(value)
+
+
+# ----- Erreurs -----
 
 
 class ErrorDetail(BaseModel):
