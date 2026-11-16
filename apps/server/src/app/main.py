@@ -12,7 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from app.settings import get_settings
 from app.errors import ApiError, api_error_handler, validation_exception_handler
-from app import registration
+from app import auth_routes, registration
 
 
 load_dotenv()
@@ -46,6 +46,7 @@ app.add_exception_handler(ApiError, api_error_handler)
 
 # Contract routes (openapi.yaml, server url: /api/v1)
 app.include_router(registration.router, prefix="/api/v1")
+app.include_router(auth_routes.router, prefix="/api/v1")
 
 
 @app.get("/")
