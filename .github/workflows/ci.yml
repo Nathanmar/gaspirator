@@ -24,17 +24,43 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Type check
         run: pnpm run check-types
 
       - name: Build
         run: pnpm run build
+
+  server:
+    name: Server lint & tests (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install dependencies
+        run: uv sync --frozen --extra dev
+      - name: Ruff
+        run: uv run --frozen ruff check .
+      - name: Pytest
+        run: uv run --frozen pytest
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Report only for now, like the other CVE checks.
+      - uses: actions/dependency-review-action@v4
+        continue-on-error: true
 
   audit-web:
     name: CVE audit (web / TanStack)
@@ -44,7 +70,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       # Report only for now: findings never fail the pipeline, whatever the severity.
       - name: pnpm audit
         continue-on-error: true
@@ -96,12 +122,10 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 
-      # 0.35.0 is the only trivy-action tag untouched by the March 2026 supply-chain attack;
-      # Trivy itself is pinned to v0.69.3 (last safe release before the compromised v0.69.4).
       - name: Trivy scan
         uses: aquasecurity/trivy-action@0.35.0
         with:
-          version: v0.69.3
+          version: v0.76.2
           input: ${{ env.IMAGE_TAR }}
           format: table
           output: ${{ env.REPORT }}

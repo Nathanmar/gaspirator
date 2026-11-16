@@ -59,7 +59,13 @@ This starts the web app and the API together; if one stops, the other stops too.
 docker compose up --build
 ```
 
-Runs the web app on `http://localhost:3001` and the API on `http://localhost:8000`. Create `apps/web/.env` and `apps/server/.env` first. The compose file does not include a PostgreSQL service yet.
+Runs the web app on `http://localhost:3001` and the API on `http://localhost:8000`. Create `apps/web/.env` and `apps/server/.env` first.
+
+PostgreSQL 18 runs in the `db` service on `localhost:5432` (user `postgres`, password `postgres`, database `gaspirator`; override with `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`). Data is kept in the `db-data` volume. In compose, the API gets `DATABASE_URL` pointing to `db`. To run only the database for local dev:
+
+```sh
+docker compose up -d db
+```
 
 ## Backlog (MoSCoW)
 
