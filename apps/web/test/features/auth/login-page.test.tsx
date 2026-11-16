@@ -32,6 +32,15 @@ describe("LoginPage", () => {
     expect(await screen.findByText("Espace fournisseur")).toBeInTheDocument();
   });
 
+  it("links to the registration page with the same role", async () => {
+    renderWithRouter(<LoginPage role="association" />, { path: "/login" });
+
+    expect(await screen.findByRole("link", { name: "Créer un compte" })).toHaveAttribute(
+      "href",
+      "/register?role=association",
+    );
+  });
+
   it("stores the tokens and goes to the home page once logged in", async () => {
     const fetchMock = mockFetch(jsonResponse(200, tokens));
     const router = renderWithRouter(<LoginPage />, { path: "/login" });

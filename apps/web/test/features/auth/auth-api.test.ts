@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { login } from "@/features/auth/auth-api";
+import { createRegistrationRequest, login } from "@/features/auth/auth-api";
 import { ApiError, NetworkError } from "@/lib/api-client";
 
+import { createdRegistration, registrationPayload } from "../../fixtures/registration";
 import { jsonResponse, mockFetch } from "../../utils/fetch";
 
 const credentials = { email: "marie.dupont@example.org", password: "secret" };
@@ -122,5 +123,19 @@ describe("login", () => {
       message: "Impossible de joindre le serveur. Vérifiez votre connexion.",
     });
     expect(error).toHaveProperty("cause", failure);
+  });
+});
+
+describe("createRegistrationRequest", () => {
+  it("posts the request to /registration-requests and returns the created request", async () => {
+    const fetchMock = mockFetch(jsonResponse(201, createdRegistration));
+
+    const result = await createRegistrationRequest(registrationPayload);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://api.test/registration-requests");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init?.body))).toEqual(registrationPayload);
+    expect(result).toEqual(createdRegistration);
   });
 });
