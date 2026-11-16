@@ -31,6 +31,57 @@ class UserRole(StrEnum):
     MANAGER = "manager"
 
 
+class LotCategory(StrEnum):
+    """Food categories only (non-food donations are out of scope)."""
+
+    FRESH_PRODUCE = "fresh_produce"
+    DAIRY = "dairy"
+    MEAT_FISH = "meat_fish"
+    BAKERY = "bakery"
+    PREPARED_MEAL = "prepared_meal"
+    DRY_GOODS = "dry_goods"
+    BEVERAGES = "beverages"
+    OTHER_FOOD = "other_food"
+
+
+class Allergen(StrEnum):
+    """The 14 allergens that must be declared."""
+
+    GLUTEN = "gluten"
+    CRUSTACEANS = "crustaceans"
+    EGGS = "eggs"
+    FISH = "fish"
+    PEANUTS = "peanuts"
+    SOYBEANS = "soybeans"
+    MILK = "milk"
+    NUTS = "nuts"
+    CELERY = "celery"
+    MUSTARD = "mustard"
+    SESAME = "sesame"
+    SULPHITES = "sulphites"
+    LUPIN = "lupin"
+    MOLLUSCS = "molluscs"
+
+
+class Storage(StrEnum):
+    AMBIENT = "ambient"
+    REFRIGERATED = "refrigerated"
+    FROZEN = "frozen"
+
+
+class QuantityUnit(StrEnum):
+    PORTIONS = "portions"
+    KG = "kg"
+    PIECES = "pieces"
+
+
+class LotStatus(StrEnum):
+    AVAILABLE = "available"
+    RESERVED = "reserved"
+    COLLECTED = "collected"
+    EXPIRED = "expired"
+
+
 class StrictModel(BaseModel):
     """Request body model: unknown fields are rejected (additionalProperties: false)."""
 
