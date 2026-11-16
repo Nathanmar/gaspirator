@@ -79,47 +79,6 @@ async def get_current_user(authorization: str = Header(default="")):
 _items: dict[int, ItemResponse] = {}
 _next_id = 1
 
-
-@app.post("/items", response_model=ItemResponse, status_code=201)
-async def create_item(item: ItemCreate):
-    """Create a new item with validated data."""
-    global _next_id
-    item_response = ItemResponse(
-        id=_next_id,
-        name=item.name,
-        description=item.description,
-        price=item.price,
-        quantity=item.quantity,
-    )
-    _items[_next_id] = item_response
-    _next_id += 1
-    return item_response
-
-
-@app.get("/items", response_model=list[ItemResponse])
-async def list_items():
-    """List all items."""
-    return list(_items.values())
-
-
-@app.get("/items/{item_id}", response_model=ItemResponse)
-async def get_item(item_id: int):
-    """Get an item by ID."""
-    if item_id not in _items:
-        raise HTTPException(status_code=404, detail="Item not found")
-    return _items[item_id]
-
-
-@app.post("/contact", response_model=MessageResponse)
-async def send_message(message: MessageCreate):
-    """Send a contact message with validated email."""
-    # In a real app, this would send an email or store the message
-    return MessageResponse(
-        success=True,
-        message=f"Message received from {message.email}",
-    )
-
-
 if __name__ == "__main__":
     import uvicorn
 
