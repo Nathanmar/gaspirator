@@ -252,6 +252,20 @@ class Lot(BaseModel):
         return _to_utc(value)
 
 
+# ----- Pagination -----
+
+
+class PageMeta(BaseModel):
+    page: int
+    per_page: int
+    total: int
+
+
+class LotPage(BaseModel):
+    data: list[Lot]
+    meta: PageMeta
+
+
 # ----- Erreurs -----
 
 

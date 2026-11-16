@@ -3,14 +3,25 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Query
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import models
 from app.auth import get_current_supplier, get_current_user
 from app.db import get_session
 from app.errors import forbidden, not_found
-from app.schemas import Address, Error, GeoPoint, Lot, LotCreate, LotStatus, SupplierSummary
+from app.schemas import (
+    Address,
+    Error,
+    GeoPoint,
+    Lot,
+    LotCreate,
+    LotPage,
+    LotStatus,
+    PageMeta,
+    SupplierSummary,
+)
 
 router = APIRouter(tags=["Lots"])
 
@@ -129,3 +140,35 @@ def get_lot(
     if user.supplier_id is not None and lot.supplier_id != user.supplier_id:
         raise forbidden("Ce lot a été publié par un autre fournisseur.")
     return to_schema(lot, datetime.now(UTC))
+
+
+@router.get(
+    "/me/lots",
+    response_model=LotPage,
+    operation_id="listMyLots",
+    responses=_errors(400, 401, 403),
+)
+def list_my_lots(
+    supplier: CurrentSupplier,
+    session: DbSession,
+    page: Annotated[int, Query(ge=1)] = 1,
+    per_page: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> LotPage:
+    """The lots of the current supplier, whatever their status, most recent first."""
+    mine = models.Lot.supplier_id == supplier.id
+    total = session.scalar(select(func.count()).select_from(models.Lot).where(mine))
+    offset = (page - 1) * per_page
+    lots = []
+    if offset < total:  # also keeps a huge page from overflowing the SQL OFFSET
+        lots = session.scalars(
+            select(models.Lot)
+            .where(mine)
+            .order_by(models.Lot.created_at.desc(), models.Lot.id.desc())
+            .offset(offset)
+            .limit(per_page)
+        ).all()
+    now = datetime.now(UTC)
+    return LotPage(
+        data=[to_schema(lot, now) for lot in lots],
+        meta=PageMeta(page=page, per_page=per_page, total=total),
+    )

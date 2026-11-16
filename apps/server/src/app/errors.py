@@ -17,6 +17,10 @@ _MESSAGES: dict[str, str] = {
     "model_type": "doit être un objet",
     "model_attributes_type": "doit être un objet",
     "dict_type": "doit être un objet",
+    "int_type": "doit être un entier",
+    "int_parsing": "doit être un entier",
+    "greater_than_equal": "doit être supérieur ou égal à {ge}",
+    "less_than_equal": "doit être inférieur ou égal à {le}",
     "list_type": "doit être une liste",
     "bool_type": "doit être un booléen",
     "bool_parsing": "doit être un booléen",
@@ -60,7 +64,7 @@ _UNAUTHORIZED_HEADERS = {"WWW-Authenticate": "Bearer"}
 
 # Operations whose contract has no 422 response: invalid fields are a 400 (`BadRequest`
 # covers "paramètre incorrect").
-_BAD_REQUEST_ON_VALIDATION = {"refreshToken", "logout"}
+_BAD_REQUEST_ON_VALIDATION = {"refreshToken", "logout", "listMyLots"}
 
 # Operations whose contract has neither 400 nor 422: an id that cannot exist (not an
 # integer, out of range) is simply not found.
