@@ -4,4 +4,6 @@ import { afterEach } from "vitest";
 
 afterEach(() => {
   cleanup();
+  // Stores persisted with zustand write to localStorage: start every test from a clean slate.
+  localStorage.clear();
 });
