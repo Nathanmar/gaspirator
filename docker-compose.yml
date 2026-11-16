@@ -1,45 +1,32 @@
-# Docker Compose for my-app
-# Full-stack container orchestration
-
-name: my-app
+name: gaspirator
 
 services:
   web:
     build:
-      context: ./apps/web
-      dockerfile: Dockerfile
-    container_name: my-app-web
+      context: .
+      dockerfile: apps/web/Dockerfile.vite
+      args:
+        VITE_SERVER_URL: http://localhost:8000
+    env_file:
+      - apps/web/.env
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - NODE_ENV=production
+    depends_on:
+      - app
     restart: unless-stopped
-    networks:
-      - my-app-network
 
-  db:
-    image: postgres:16-alpine
-    container_name: my-app-postgres
-    environment:
-      POSTGRES_DB: my-app
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+  app:
+    build:
+      context: apps/server
+      dockerfile: Dockerfile
+    env_file:
+      - apps/server/.env
     ports:
-      - "5432:5432"
-    volumes:
-      - my-app_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "8000:8000"
+    environment:
+      - CORS_ORIGIN=http://localhost:3001
+      - HOST=0.0.0.0
+      - PORT=8000
     restart: unless-stopped
-    networks:
-      - my-app-network
-
-networks:
-  my-app-network:
-    driver: bridge
-
-volumes:
-  my-app_postgres_data:

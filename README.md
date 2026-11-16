@@ -3,60 +3,63 @@
 A platform that connects food **suppliers** (canteens, hospitals, supermarkets…) with **charities**, so surplus food is donated instead of thrown away.
 
 - **Web front end**: suppliers and admin back office
-- **Mobile app**: charities
+- **Mobile app**: charities (not scaffolded yet)
 - **Back end** + **database**
 
 Links: [GitHub Project](https://github.com/users/Nathanmar/projects/3) · [Notion](https://app.notion.com/p/Projet-409243b4cee0809bb06ee2814d7a2789)
 
-## Applications and resources
+## Stack
 
-- **aspnet-mvc** (dotnet, backend): `apps/server`; part `backend:dotnet:aspnet-mvc`
-- **postgres** (universal, database): `packages/db`; part `database:universal:postgres`
-- **native-bare** (react-native, mobile): `apps/native`; part `mobile:react-native:native-bare`
-- **eslint** (universal, codeQuality): `.`; part `codequality:universal:eslint`
-- **prettier** (universal, codeQuality): `.`; part `codequality:universal:prettier`
-- **husky** (universal, gitHooks): `.`; part `githooks:universal:husky`
-- **github-actions** (universal, continuousIntegration): `.`; part `continuousintegration:universal:github-actions`
-- **tanstack-start** (typescript, frontend): `apps/web`; part `frontend:typescript:tanstack-start`
+| Part                 | Tech                                                                  | Path          |
+| -------------------- | --------------------------------------------------------------------- | ------------- |
+| Web front end        | TanStack Router + Vite, Tailwind, daisyUI, Zustand, TanStack Form, GSAP | `apps/web`    |
+| Back end             | Python FastAPI, Pydantic, JWT auth, Ruff, pytest, uv                  | `apps/server` |
+| Database             | PostgreSQL                                                            | —             |
+| Shared env / config  | TypeScript packages                                                   | `packages/*`  |
+| Tooling              | pnpm workspaces, Turborepo, Docker Compose, Dev Container, GitHub Actions | `.`           |
+
+The project was generated with Better Fullstack; `bts.jsonc` describes the stack.
 
 ## Setup
 
-Install the SDKs for the selected languages before preparing dependencies. SwiftUI needs macOS, Xcode, and XcodeGen; Kotlin Android apps need a JDK and Android SDK; Flutter needs the Flutter SDK. Rust web apps also need the WebAssembly target and Trunk or Dioxus CLI.
-
-JavaScript dependencies are installed at the workspace root. Each native application keeps its own toolchain. Native package scripts require `bash` on PATH; install Git Bash on Windows. Run the shell commands below in Bash.
-
-If dependencies were not prepared during creation, run:
+Requirements: Node.js, [pnpm](https://pnpm.io), Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```sh
 pnpm install
-(cd apps/server && dotnet restore)
+pnpm setup:server
 ```
 
-Copy each application's `.env.example` to `.env` when present and configure database credentials before starting database-backed services.
+Copy `apps/server/.env.example` to `apps/server/.env` and set `SECRET_KEY` and `DATABASE_URL`.
 
 ## Local development
 
-Start the selected web applications and backend services together:
-
 ```sh
-pnpm run dev
+pnpm dev
 ```
 
-The supervisor stops the other services when one exits. Native mobile applications run separately so you can choose a simulator or device. Open Kotlin applications in Android Studio.
+This starts the web app and the API together; if one stops, the other stops too. To run them separately:
 
-### .NET ASP.NET Core MVC
-
-Run independently from the project root:
-
-```sh
-cd apps/server && dotnet run
-```
+| Command             | What it does                                 |
+| ------------------- | -------------------------------------------- |
+| `pnpm dev:web`      | Web app only                                 |
+| `pnpm dev:server`   | API only (FastAPI with auto-reload)          |
+| `pnpm build`        | Build the web app                            |
+| `pnpm test`         | Web tests (Vitest)                           |
+| `pnpm test:server`  | API tests (pytest)                           |
+| `pnpm check:server` | Lint the API (Ruff)                          |
 
 ## Connections
 
-- **.NET ASP.NET Core MVC** (default client connection): `http://localhost:5000`, health endpoint `http://localhost:5000/`.
+- **Web app**: `http://localhost:5173`
+- **API**: `http://localhost:8000`, interactive docs at `http://localhost:8000/docs`
 
-Cross-language clients communicate over HTTP. Framework-specific clients such as tRPC are used only with compatible backends. Generated connection files identify the default backend; additional services retain their own paths and endpoints.
+## Docker
+
+```sh
+docker compose up --build
+```
+
+Runs the web app on `http://localhost:3001` and the API on `http://localhost:8000`. Create `apps/web/.env` and `apps/server/.env` first. The compose file does not include a PostgreSQL service yet.
 
 ## Backlog (MoSCoW)
 

@@ -1,54 +1,54 @@
-import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
+import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
+import Header from "@/components/header";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
-import Header from "../components/header";
-import appCss from "../index.css?url";
+import "../index.css";
 
 export type RouterAppContext = Record<string, never>;
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
+  component: RootComponent,
   head: () => ({
     meta: [
       {
-        charSet: "utf-8",
+        title: "gaspirator",
       },
       {
-        name: "viewport",
-        content: "width=device-width, initial-scale=1",
-      },
-      {
-        title: "My App",
+        name: "description",
+        content: "gaspirator is a web application",
       },
     ],
     links: [
       {
-        rel: "stylesheet",
-        href: appCss,
+        rel: "icon",
+        href: "/favicon.ico",
       },
     ],
   }),
-
-  component: RootDocument,
 });
 
-function RootDocument() {
+function RootComponent() {
   return (
-    <html lang="en" className="dark">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <div className="grid h-svh grid-rows-[auto_1fr]">
+    <>
+      <HeadContent />
+
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
+        disableTransitionOnChange
+        storageKey="vite-ui-theme"
+      >
+        <div className="grid grid-rows-[auto_1fr] h-svh">
           <Header />
           <Outlet />
         </div>
         <Toaster richColors />
+      </ThemeProvider>
 
-        <TanStackRouterDevtools position="bottom-left" />
-        <Scripts />
-      </body>
-    </html>
+      <TanStackRouterDevtools position="bottom-left" />
+    </>
   );
 }
