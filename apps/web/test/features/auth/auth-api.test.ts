@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createRegistrationRequest, login } from "@/features/auth/auth-api";
+import { createRegistrationRequest, login, logout } from "@/features/auth/auth-api";
 import { ApiError, NetworkError } from "@/lib/api-client";
 
 import { tokens } from "../../fixtures/auth";
@@ -131,5 +131,20 @@ describe("createRegistrationRequest", () => {
     expect(init?.method).toBe("POST");
     expect(JSON.parse(String(init?.body))).toEqual(supplierRegistration);
     expect(result).toEqual(createdRegistration);
+  });
+});
+
+describe("logout", () => {
+  it("revokes the refresh token, authenticated with the access token (204)", async () => {
+    const fetchMock = mockFetch(new Response(null, { status: 204 }));
+
+    const result = await logout(tokens);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://api.test/auth/logout");
+    expect(init?.method).toBe("POST");
+    expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer access");
+    expect(JSON.parse(String(init?.body))).toEqual({ refresh_token: "refresh" });
+    expect(result).toBeUndefined();
   });
 });

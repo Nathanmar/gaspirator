@@ -157,8 +157,10 @@ describe("RegisterPage", () => {
     expect(sentBody(fetchMock)).toEqual(associationRegistration);
   });
 
-  it("explains that the e-mail, SIRET or RNA number is already used (409)", async () => {
-    mockFetch(jsonResponse(409, { code: "conflict", message: "Conflit." }));
+  it("shows the server's explanation of what is already used (409)", async () => {
+    mockFetch(
+      jsonResponse(409, { code: "conflict", message: "Ce SIRET ou ce n° RNA est déjà utilisé." }),
+    );
     renderWithRouter(<RegisterPage role="supplier" />, { path: "/register" });
 
     await fillAccountStep();
@@ -166,7 +168,7 @@ describe("RegisterPage", () => {
     await submit();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Un compte existe déjà avec cette adresse e-mail, ce SIRET ou ce n° RNA.",
+      "Ce SIRET ou ce n° RNA est déjà utilisé.",
     );
   });
 
