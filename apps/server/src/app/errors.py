@@ -17,7 +17,6 @@ _MESSAGES: dict[str, str] = {
     "model_type": "doit être un objet",
     "model_attributes_type": "doit être un objet",
     "dict_type": "doit être un objet",
-    "json_invalid": "JSON invalide",
 }
 
 
@@ -38,7 +37,11 @@ def _message(error: dict) -> str:
 
 
 async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
-    """422: field-level validation errors."""
+    """400 if the JSON body is malformed, 422 for field-level validation errors."""
+    if any(err["type"] == "json_invalid" for err in exc.errors()):
+        body = Error(code="bad_request", message="Le corps de la requête n'est pas un JSON valide.")
+        return JSONResponse(status_code=400, content=body.model_dump(exclude_none=True))
+
     body = Error(
         code="validation_error",
         message="Certains champs sont invalides.",
