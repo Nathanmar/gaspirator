@@ -35,6 +35,21 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Prism validation proxy: same API as `app`, checked against openapi.yaml.
+  # Paths without the /api/v1 prefix (e.g. POST http://localhost:4010/auth/login);
+  # contract violations are reported in the `sl-violations` response header.
+  prism:
+    image: stoplight/prism:5.15.10
+    # --multiprocess false: the image crashes in cluster mode (reading 'isPrimary').
+    command: proxy -h 0.0.0.0 --multiprocess false /contract/openapi.yaml http://app:8000/api/v1
+    volumes:
+      - ./openapi.yaml:/contract/openapi.yaml:ro
+    ports:
+      - "4010:4010"
+    depends_on:
+      - app
+    restart: unless-stopped
+
   db:
     image: postgres:18-alpine
     environment:
