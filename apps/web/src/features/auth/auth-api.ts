@@ -1,5 +1,8 @@
 import { apiRequest } from "@/lib/api-client";
 
+/** `OrganizationType` in the API contract. */
+export type OrganizationType = "supplier" | "association";
+
 /** `LoginRequest` in the API contract. */
 export type LoginRequest = {
   email: string;

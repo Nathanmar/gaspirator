@@ -14,6 +14,8 @@ import "../index.css";
 
 export type RouterAppContext = Record<string, never>;
 
+const FULL_BLEED_PATHS = new Set(["/", "/login"]);
+
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
   head: () => ({
@@ -41,8 +43,10 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 });
 
 function RootComponent() {
-  // The landing page is full-bleed and brings its own navigation.
-  const isLanding = useRouterState({ select: (state) => state.location.pathname === "/" });
+  // The landing and auth pages are full-bleed and bring their own navigation.
+  const isFullBleed = useRouterState({
+    select: (state) => FULL_BLEED_PATHS.has(state.location.pathname),
+  });
 
   return (
     <>
@@ -54,7 +58,7 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        {isLanding ? (
+        {isFullBleed ? (
           <Outlet />
         ) : (
           <div className="grid h-svh grid-rows-[auto_1fr]">
