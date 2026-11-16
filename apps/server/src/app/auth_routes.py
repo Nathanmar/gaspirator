@@ -3,13 +3,14 @@
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.auth import (
     create_access_token,
     generate_refresh_token,
+    get_current_user,
     hash_refresh_token,
     verify_password,
 )
@@ -114,3 +115,29 @@ def refresh_token(payload: RefreshRequest, session: DbSession) -> AuthTokens:
 
     stored.revoked_at = now
     return _issue_tokens(session, stored.user)
+
+
+@router.post(
+    "/logout",
+    status_code=204,
+    response_class=Response,
+    operation_id="logout",
+    responses=_errors(401),
+)
+def logout(
+    payload: RefreshRequest,
+    session: DbSession,
+    user: Annotated[User, Depends(get_current_user)],
+) -> Response:
+    """Revoke a refresh token of the current user (no-op if unknown or already revoked)."""
+    session.execute(
+        update(RefreshToken)
+        .where(
+            RefreshToken.token_hash == hash_refresh_token(payload.refresh_token),
+            RefreshToken.user_id == user.id,
+            RefreshToken.revoked_at.is_(None),
+        )
+        .values(revoked_at=datetime.now(UTC))
+    )
+    session.commit()
+    return Response(status_code=204)
