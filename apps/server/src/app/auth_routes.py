@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.auth import (
@@ -16,7 +16,14 @@ from app.auth import (
 from app.db import get_session
 from app.errors import forbidden, unauthorized
 from app.models import RefreshToken, User
-from app.schemas import AuthTokens, Error, LoginRequest, RegistrationStatus, UserRole
+from app.schemas import (
+    AuthTokens,
+    Error,
+    LoginRequest,
+    RefreshRequest,
+    RegistrationStatus,
+    UserRole,
+)
 from app.settings import get_settings
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -77,3 +84,33 @@ def login(payload: LoginRequest, session: DbSession) -> AuthTokens:
         raise unauthorized("E-mail ou mot de passe incorrect.")
     _check_can_log_in(user)
     return _issue_tokens(session, user)
+
+
+@router.post(
+    "/refresh",
+    response_model=AuthTokens,
+    operation_id="refreshToken",
+    responses=_errors(400, 401),
+)
+def refresh_token(payload: RefreshRequest, session: DbSession) -> AuthTokens:
+    """Exchange a refresh token for new tokens; the refresh token sent is revoked."""
+    now = datetime.now(UTC)
+    stored = session.scalar(
+        select(RefreshToken)
+        .where(RefreshToken.token_hash == hash_refresh_token(payload.refresh_token))
+        .with_for_update()
+    )
+    if stored is None or stored.expires_at <= now:
+        raise unauthorized("Refresh token invalide ou expiré.")
+    if stored.revoked_at is not None:
+        # A rotated token is replayed: it may have been stolen, end all the user's sessions.
+        session.execute(
+            update(RefreshToken)
+            .where(RefreshToken.user_id == stored.user_id, RefreshToken.revoked_at.is_(None))
+            .values(revoked_at=now)
+        )
+        session.commit()
+        raise unauthorized("Refresh token invalide ou expiré.")
+
+    stored.revoked_at = now
+    return _issue_tokens(session, stored.user)
