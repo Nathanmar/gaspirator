@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
-from app.schemas import ItemCreate, ItemResponse, MessageCreate, MessageResponse
 from app.settings import get_settings
 from app.auth import create_access_token, verify_token
 
@@ -73,11 +72,6 @@ async def get_current_user(authorization: str = Header(default="")):
     if payload is None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return {"username": payload.get("sub"), "token_data": payload}
-
-
-# In-memory storage for demo (replace with database in production)
-_items: dict[int, ItemResponse] = {}
-_next_id = 1
 
 if __name__ == "__main__":
     import uvicorn

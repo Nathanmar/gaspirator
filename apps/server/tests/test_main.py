@@ -28,18 +28,18 @@ def test_health(client: TestClient):
 def test_register(client: TestClient):
     """Test register endpoint 201"""
     account = {
-        "email": "test@example.com", 
-        "password": "testPass1.", 
-        "first_name": "Test", 
+        "email": "test@example.com",
+        "password": "testPass1.",
+        "first_name": "Test",
         "last_name": "User"
     }
     organisation = {
-        "type": "supplier", 
-        "name": "Test Company", 
-        "legal_id": "123456789", 
-        "address": "123 Test St", 
-        "contact_phone": "555-1234", 
-        "opening_hours": "9am-5pm", 
+        "type": "supplier",
+        "name": "Test Company",
+        "legal_id": "123456789",
+        "address": "123 Test St",
+        "contact_phone": "555-1234",
+        "opening_hours": "9am-5pm",
         "supplier_type": "canteen",
     }
 
