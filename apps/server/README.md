@@ -28,6 +28,9 @@ override it with `TEST_DATABASE_URL`):
 uv run pytest
 ```
 
+Tests are grouped by contract tag, one folder per tag (`tests/auth/`, `tests/registration/`,
+then `tests/lots/`...), one file per operation, with a section per status code.
+
 Run the application:
 
 ```sh
