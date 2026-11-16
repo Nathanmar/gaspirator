@@ -1,7 +1,9 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { login } from "@/features/auth/auth-api";
 import { ApiError, NetworkError } from "@/lib/api-client";
+
+import { jsonResponse, mockFetch } from "../../utils/fetch";
 
 const credentials = { email: "marie.dupont@example.org", password: "secret" };
 
@@ -13,26 +15,6 @@ const tokens = {
 };
 
 const FALLBACK_MESSAGE = "Une erreur inattendue est survenue. Réessayez plus tard.";
-
-const originalFetch = globalThis.fetch;
-
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
-
-// Replaces fetch with a mock that resolves with the given response.
-function mockFetch(response: Response) {
-  const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(response);
-  globalThis.fetch = fetchMock;
-  return fetchMock;
-}
-
-function jsonResponse(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
 
 describe("login", () => {
   it("posts the credentials as JSON to /auth/login", async () => {
