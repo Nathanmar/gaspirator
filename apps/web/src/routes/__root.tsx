@@ -1,4 +1,9 @@
-import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
+import {
+  HeadContent,
+  Outlet,
+  createRootRouteWithContext,
+  useRouterState,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import Header from "@/components/header";
@@ -8,6 +13,8 @@ import { Toaster } from "@/components/ui/sonner";
 import "../index.css";
 
 export type RouterAppContext = Record<string, never>;
+
+const FULL_BLEED_PATHS = new Set(["/", "/login", "/register"]);
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
@@ -26,11 +33,21 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
         rel: "icon",
         href: "/favicon.ico",
       },
+      {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: "/favicon.svg",
+      },
     ],
   }),
 });
 
 function RootComponent() {
+  // The landing and auth pages are full-bleed and bring their own navigation.
+  const isFullBleed = useRouterState({
+    select: (state) => FULL_BLEED_PATHS.has(state.location.pathname),
+  });
+
   return (
     <>
       <HeadContent />
@@ -41,10 +58,14 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <div className="grid grid-rows-[auto_1fr] h-svh">
-          <Header />
+        {isFullBleed ? (
           <Outlet />
-        </div>
+        ) : (
+          <div className="grid h-svh grid-rows-[auto_1fr]">
+            <Header />
+            <Outlet />
+          </div>
+        )}
         <Toaster richColors />
       </ThemeProvider>
 

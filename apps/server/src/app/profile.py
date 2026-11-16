@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 
 from app import models
 from app.auth import get_current_user
+from app.lots import supplier_summary
 from app.schemas import Address, Association, Error, GeoPoint, Me, Supplier
 
 # The contract puts GET /me under the `Auth` tag.
@@ -14,23 +15,10 @@ router = APIRouter(tags=["Auth"])
 CurrentUser = Annotated[models.User, Depends(get_current_user)]
 
 
-def _address(entity: models.Supplier | models.Association) -> Address:
-    return Address(street=entity.street, postal_code=entity.postal_code, city=entity.city)
-
-
-def _location(entity: models.Supplier | models.Association) -> GeoPoint:
-    return GeoPoint(latitude=entity.latitude, longitude=entity.longitude)
-
-
 def to_supplier(supplier: models.Supplier) -> Supplier:
-    """Contract `Supplier` from the `suppliers` row (address and location nested)."""
+    """Contract `Supplier`: `SupplierSummary` + `legal_id` + `created_at`."""
     return Supplier(
-        id=supplier.id,
-        name=supplier.name,
-        supplier_type=supplier.supplier_type,
-        address=_address(supplier),
-        location=_location(supplier),
-        contact_phone=supplier.contact_phone,
+        **supplier_summary(supplier).model_dump(),
         legal_id=supplier.legal_id,
         created_at=supplier.created_at,
     )
@@ -41,8 +29,12 @@ def to_association(association: models.Association) -> Association:
     return Association(
         id=association.id,
         name=association.name,
-        address=_address(association),
-        location=_location(association),
+        address=Address(
+            street=association.street,
+            postal_code=association.postal_code,
+            city=association.city,
+        ),
+        location=GeoPoint(latitude=association.latitude, longitude=association.longitude),
         contact_phone=association.contact_phone,
         legal_id=association.legal_id,
         created_at=association.created_at,

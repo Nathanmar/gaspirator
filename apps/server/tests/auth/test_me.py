@@ -7,14 +7,11 @@ from jose import jwt
 from sqlalchemy.orm import Session
 
 from app.auth import ALGORITHM, create_access_token
-from app.models import Association, Supplier
-from app.schemas import SupplierType, UserRole
+from app.schemas import UserRole
 from app.settings import get_settings
 from tests.prism import assert_contract
 
 ME_PATH = "/me"
-
-ADDRESS = {"street": "12 rue de la République", "postal_code": "69002", "city": "Lyon"}
 
 
 def _bearer(token: str) -> dict:
@@ -28,43 +25,12 @@ def _assert_unauthorized(response) -> None:
     assert isinstance(data["message"], str) and data["message"]
 
 
-def _add_supplier(db: Session) -> Supplier:
-    supplier = Supplier(
-        name="Cantine du lycée Ampère",
-        supplier_type=SupplierType.CANTEEN,
-        **ADDRESS,
-        latitude=45.7578,
-        longitude=4.8320,
-        contact_phone="04 78 00 00 00",
-        legal_id="19690103400017",
-    )
-    db.add(supplier)
-    db.commit()
-    return supplier
-
-
-def _add_association(db: Session) -> Association:
-    association = Association(
-        name="Restos du Cœur Lyon 2",
-        **ADDRESS,
-        latitude=45.75,
-        longitude=4.85,
-        contact_phone="04 78 00 00 01",
-        legal_id="W691234567",
-    )
-    db.add(association)
-    db.commit()
-    return association
-
-
-def test_me_supplier_manager(api: httpx2.Client, db: Session, create_user):
+def test_me_supplier_manager(api: httpx2.Client, create_supplier, create_user, auth_headers):
     """The manager of a supplier gets the contract `Supplier`, and no association."""
-    supplier = _add_supplier(db)
-    manager = create_user()
-    manager.supplier = supplier
-    db.commit()
+    supplier = create_supplier()
+    manager = create_user(supplier=supplier)
 
-    response = api.get(ME_PATH, headers=_bearer(create_access_token(manager)))
+    response = api.get(ME_PATH, headers=auth_headers(manager))
 
     assert_contract(response)
     assert response.status_code == 200
@@ -79,10 +45,14 @@ def test_me_supplier_manager(api: httpx2.Client, db: Session, create_user):
             "id": supplier.id,
             "name": "Cantine du lycée Ampère",
             "supplier_type": "canteen",
-            "address": ADDRESS,
+            "address": {
+                "street": "12 rue de la République",
+                "postal_code": "69002",
+                "city": "Lyon",
+            },
             "location": {"latitude": 45.7578, "longitude": 4.832},
             "contact_phone": "04 78 00 00 00",
-            "legal_id": "19690103400017",
+            "legal_id": supplier.legal_id,
             "created_at": data["supplier"]["created_at"],
         },
         "association": None,
@@ -90,14 +60,12 @@ def test_me_supplier_manager(api: httpx2.Client, db: Session, create_user):
     assert datetime.fromisoformat(data["supplier"]["created_at"])
 
 
-def test_me_association_manager(api: httpx2.Client, db: Session, create_user):
+def test_me_association_manager(api: httpx2.Client, create_association, create_user, auth_headers):
     """The manager of an association gets the contract `Association`, and no supplier."""
-    association = _add_association(db)
-    manager = create_user()
-    manager.association = association
-    db.commit()
+    association = create_association()
+    manager = create_user(association=association)
 
-    response = api.get(ME_PATH, headers=_bearer(create_access_token(manager)))
+    response = api.get(ME_PATH, headers=auth_headers(manager))
 
     assert_contract(response)
     assert response.status_code == 200
@@ -106,19 +74,19 @@ def test_me_association_manager(api: httpx2.Client, db: Session, create_user):
     assert data["association"] == {
         "id": association.id,
         "name": "Restos du Cœur Lyon 2",
-        "address": ADDRESS,
-        "location": {"latitude": 45.75, "longitude": 4.85},
+        "address": {"street": "3 rue Sainte-Hélène", "postal_code": "69002", "city": "Lyon"},
+        "location": {"latitude": 45.7537, "longitude": 4.8286},
         "contact_phone": "04 78 00 00 01",
-        "legal_id": "W691234567",
+        "legal_id": association.legal_id,
         "created_at": data["association"]["created_at"],
     }
 
 
-def test_me_admin(api: httpx2.Client, create_user):
+def test_me_admin(api: httpx2.Client, create_user, auth_headers):
     """A platform admin manages neither a supplier nor an association."""
     admin = create_user(email="admin@gaspirator.fr", role=UserRole.ADMIN)
 
-    response = api.get(ME_PATH, headers=_bearer(create_access_token(admin)))
+    response = api.get(ME_PATH, headers=auth_headers(admin))
 
     assert_contract(response)
     assert response.status_code == 200

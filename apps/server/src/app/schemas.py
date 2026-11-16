@@ -1,10 +1,21 @@
 """Pydantic schemas for request/response validation (see openapi.yaml)."""
 
-from datetime import datetime
+from datetime import UTC, date, datetime, time, timedelta
+from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, ValidationInfo, field_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
 
@@ -31,6 +42,57 @@ class UserRole(StrEnum):
     MANAGER = "manager"
 
 
+class LotCategory(StrEnum):
+    """Food categories only (non-food donations are out of scope)."""
+
+    FRESH_PRODUCE = "fresh_produce"
+    DAIRY = "dairy"
+    MEAT_FISH = "meat_fish"
+    BAKERY = "bakery"
+    PREPARED_MEAL = "prepared_meal"
+    DRY_GOODS = "dry_goods"
+    BEVERAGES = "beverages"
+    OTHER_FOOD = "other_food"
+
+
+class Allergen(StrEnum):
+    """The 14 allergens that must be declared."""
+
+    GLUTEN = "gluten"
+    CRUSTACEANS = "crustaceans"
+    EGGS = "eggs"
+    FISH = "fish"
+    PEANUTS = "peanuts"
+    SOYBEANS = "soybeans"
+    MILK = "milk"
+    NUTS = "nuts"
+    CELERY = "celery"
+    MUSTARD = "mustard"
+    SESAME = "sesame"
+    SULPHITES = "sulphites"
+    LUPIN = "lupin"
+    MOLLUSCS = "molluscs"
+
+
+class Storage(StrEnum):
+    AMBIENT = "ambient"
+    REFRIGERATED = "refrigerated"
+    FROZEN = "frozen"
+
+
+class QuantityUnit(StrEnum):
+    PORTIONS = "portions"
+    KG = "kg"
+    PIECES = "pieces"
+
+
+class LotStatus(StrEnum):
+    AVAILABLE = "available"
+    RESERVED = "reserved"
+    COLLECTED = "collected"
+    EXPIRED = "expired"
+
+
 class StrictModel(BaseModel):
     """Request body model: unknown fields are rejected (additionalProperties: false)."""
 
@@ -43,30 +105,75 @@ class Address(StrictModel):
     city: str = Field(min_length=1, max_length=120)
 
 
-class OrganizationCreate(StrictModel):
-    type: OrganizationType
-    name: str = Field(min_length=2, max_length=255)
-    legal_id: str = Field(
-        pattern=r"^(\d{14}|W\d{9})$",
-        description="SIRET (14 chiffres) pour un fournisseur, n° RNA (W + 9 chiffres) pour une association",
+class GeoPoint(BaseModel):
+    latitude: float
+    longitude: float
+
+
+class SupplierSummary(BaseModel):
+    """Supplier as seen by the associations (`SupplierSummary` of the contract)."""
+
+    id: int
+    name: str
+    supplier_type: SupplierType
+    address: Address
+    location: GeoPoint
+    contact_phone: str
+
+
+class Supplier(SupplierSummary):
+    """Full supplier, seen by its manager (`Supplier` of the contract)."""
+
+    legal_id: str
+    created_at: datetime
+
+
+class AssociationSummary(BaseModel):
+    """Association as seen by the suppliers (`AssociationSummary` of the contract)."""
+
+    id: int
+    name: str
+    address: Address
+    location: GeoPoint
+    contact_phone: str
+
+
+class Association(AssociationSummary):
+    """Full association, seen by its manager (`Association` of the contract)."""
+
+    legal_id: str
+    created_at: datetime
+
+
+class Me(BaseModel):
+    """The logged-in user (`Me` of the contract)."""
+
+    id: int
+    email: EmailStr
+    firstname: str
+    lastname: str
+    role: UserRole
+    supplier: Supplier | None = Field(
+        description="Fournisseur dont l'utilisateur est responsable, null sinon"
     )
-    supplier_type: SupplierType | None = Field(default=None, validate_default=True)
+    association: Association | None = Field(
+        description="Association dont l'utilisateur est responsable, null sinon"
+    )
+
+
+class SupplierCreate(StrictModel):
+    name: str = Field(min_length=2, max_length=255)
+    legal_id: str = Field(pattern=r"^\d{14}$", description="SIRET (14 chiffres)")
+    supplier_type: SupplierType
     address: Address
     contact_phone: str = Field(min_length=10, max_length=20)
 
-    @field_validator("supplier_type")
-    @classmethod
-    def supplier_type_matches_type(
-        cls, value: SupplierType | None, info: ValidationInfo
-    ) -> SupplierType | None:
-        org_type = info.data.get("type")
-        if org_type == OrganizationType.SUPPLIER and value is None:
-            raise PydanticCustomError("supplier_type_required", "obligatoire pour un fournisseur")
-        if org_type == OrganizationType.ASSOCIATION and value is not None:
-            raise PydanticCustomError(
-                "supplier_type_forbidden", "doit être null pour une association"
-            )
-        return value
+
+class AssociationCreate(StrictModel):
+    name: str = Field(min_length=2, max_length=255)
+    legal_id: str = Field(pattern=r"^W\d{9}$", description="N° RNA (W suivi de 9 chiffres)")
+    address: Address
+    contact_phone: str = Field(min_length=10, max_length=20)
 
 
 class AccountCreate(StrictModel):
@@ -83,68 +190,138 @@ class AccountSummary(BaseModel):
 
 
 class RegistrationRequestCreate(StrictModel):
-    organization: OrganizationCreate
+    """`SupplierRegistrationCreate` or `AssociationRegistrationCreate` of the contract.
+
+    One model with both keys optional rather than a union, so that the errors keep the
+    field paths of the body (`supplier.legal_id`, not the name of a union member).
+    """
+
+    supplier: SupplierCreate | None = None
+    association: AssociationCreate | None = None
     account: AccountCreate
+
+    @model_validator(mode="after")
+    def supplier_or_association(self) -> "RegistrationRequestCreate":
+        if self.supplier is None and self.association is None:
+            raise PydanticCustomError(
+                "registration_applicant_missing",
+                "obligatoire : un fournisseur (supplier) ou une association (association)",
+                {"field": "supplier"},
+            )
+        if self.supplier is not None and self.association is not None:
+            raise PydanticCustomError(
+                "registration_applicant_twice",
+                "une demande porte sur un fournisseur ou une association, pas les deux",
+                {"field": "association"},
+            )
+        return self
 
 
 class RegistrationRequest(BaseModel):
     id: int
     status: RegistrationStatus
-    organization: OrganizationCreate
+    supplier: SupplierCreate | None
+    association: AssociationCreate | None
     account: AccountSummary
-    organization_id: int | None
+    supplier_id: int | None
+    association_id: int | None
     created_at: datetime
     decided_at: datetime | None
 
 
-class GeoPoint(BaseModel):
-    latitude: float
-    longitude: float
+# ----- Lots -----
 
 
-class SupplierSummary(BaseModel):
+def _utc_today() -> date:
+    return datetime.now(UTC).date()
+
+
+class LotCreate(StrictModel):
+    title: str = Field(min_length=3, max_length=120)
+    category: LotCategory
+    quantity: Decimal = Field(gt=0, max_digits=12, decimal_places=3)
+    unit: QuantityUnit
+    divisible: bool = True
+    use_by_date: date = Field(description="Date limite de consommation (DLC)")
+    allergens: list[Allergen] = Field(default_factory=list)
+    storage: Storage
+    pickup_start: AwareDatetime
+    pickup_end: AwareDatetime
+
+    @field_validator("use_by_date")
+    @classmethod
+    def use_by_date_not_passed(cls, value: date) -> date:
+        if value < _utc_today():
+            raise PydanticCustomError(
+                "lot_use_by_date_passed", "doit être aujourd'hui ou plus tard"
+            )
+        return value
+
+    @field_validator("allergens")
+    @classmethod
+    def allergens_unique(cls, value: list[Allergen]) -> list[Allergen]:
+        if len(set(value)) != len(value):
+            raise PydanticCustomError("lot_allergens_duplicated", "ne doit pas contenir de doublon")
+        return value
+
+    @field_validator("pickup_end")
+    @classmethod
+    def pickup_window(cls, value: datetime, info: ValidationInfo) -> datetime:
+        start, use_by_date = info.data.get("pickup_start"), info.data.get("use_by_date")
+        if start is not None and value <= start:
+            raise PydanticCustomError("lot_pickup_end_before_start", "doit être après pickup_start")
+        if use_by_date is not None:
+            end_of_use_by_day = datetime.combine(use_by_date + timedelta(days=1), time(), UTC)
+            if value > end_of_use_by_day:
+                raise PydanticCustomError(
+                    "lot_pickup_end_after_use_by_date",
+                    "doit être au plus tard à la fin du jour de la DLC",
+                )
+        return value
+
+
+def _to_utc(value: datetime) -> datetime:
+    return value.astimezone(UTC)
+
+
+class Lot(BaseModel):
     id: int
-    name: str
-    supplier_type: SupplierType
-    address: Address
-    location: GeoPoint
-    contact_phone: str
-
-
-class Supplier(SupplierSummary):
-    """Fournisseur complet, visible par son responsable."""
-
-    legal_id: str
+    supplier: SupplierSummary
+    title: str
+    category: LotCategory
+    quantity: float
+    remaining_quantity: float
+    unit: QuantityUnit
+    divisible: bool
+    use_by_date: date
+    allergens: list[Allergen]
+    storage: Storage
+    pickup_start: datetime
+    pickup_end: datetime
+    status: LotStatus
     created_at: datetime
 
-
-class AssociationSummary(BaseModel):
-    id: int
-    name: str
-    address: Address
-    location: GeoPoint
-    contact_phone: str
+    @field_serializer("pickup_start", "pickup_end", "created_at")
+    def _serialize_utc(self, value: datetime) -> datetime:
+        """Date-times are answered in UTC, whatever the time zone of the database session."""
+        return _to_utc(value)
 
 
-class Association(AssociationSummary):
-    """Association complète, visible par son responsable."""
-
-    legal_id: str
-    created_at: datetime
+# ----- Pagination -----
 
 
-class Me(BaseModel):
-    id: int
-    email: EmailStr
-    firstname: str
-    lastname: str
-    role: UserRole
-    supplier: Supplier | None = Field(
-        description="Fournisseur dont l'utilisateur est responsable, null sinon"
-    )
-    association: Association | None = Field(
-        description="Association dont l'utilisateur est responsable, null sinon"
-    )
+class PageMeta(BaseModel):
+    page: int
+    per_page: int
+    total: int
+
+
+class LotPage(BaseModel):
+    data: list[Lot]
+    meta: PageMeta
+
+
+# ----- Erreurs -----
 
 
 class ErrorDetail(BaseModel):

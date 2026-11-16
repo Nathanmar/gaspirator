@@ -35,6 +35,17 @@ describe("LoginForm", () => {
     expect(await screen.findByText("L'adresse e-mail est invalide.")).toBeInTheDocument();
   });
 
+  it("disables the submit button while the submission is pending", async () => {
+    // A submission that never ends, to observe the pending state.
+    render(<LoginForm onSubmit={() => new Promise(() => {})} />);
+
+    await userEvent.type(screen.getByLabelText("E-mail"), "marie.dupont@example.org");
+    await userEvent.type(screen.getByLabelText("Mot de passe"), "secret");
+    await userEvent.click(screen.getByRole("button", { name: "Se connecter" }));
+
+    expect(await screen.findByRole("button", { name: "Connexion…" })).toBeDisabled();
+  });
+
   it("submits the trimmed email and the password", async () => {
     const onSubmit = vi.fn();
     render(<LoginForm onSubmit={onSubmit} />);

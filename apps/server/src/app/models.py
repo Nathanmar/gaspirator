@@ -1,22 +1,36 @@
 """SQLAlchemy ORM models."""
 
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     Double,
     Enum,
     ForeignKey,
     Index,
+    Numeric,
     String,
     func,
+    text,
 )
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
-from app.schemas import OrganizationType, RegistrationStatus, SupplierType, UserRole
+from app.schemas import (
+    LotCategory,
+    OrganizationType,
+    QuantityUnit,
+    RegistrationStatus,
+    Storage,
+    SupplierType,
+    UserRole,
+)
 
 
 def _str_enum(enum_cls: type, name: str) -> Enum:
@@ -31,53 +45,48 @@ def _str_enum(enum_cls: type, name: str) -> Enum:
     )
 
 
-class _ManagedEntity:
-    """Columns shared by suppliers and associations (contract `SupplierSummary` /
-    `AssociationSummary`): `address` and `location` are flattened into columns."""
+class Supplier(Base):
+    """A supplier (canteen, hospital, supermarket...) that publishes lots."""
+
+    __tablename__ = "suppliers"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(String(255))
-    # address
+    legal_id: Mapped[str] = mapped_column(String(14), unique=True)  # SIRET
+    supplier_type: Mapped[SupplierType] = mapped_column(_str_enum(SupplierType, "supplier_type"))
     street: Mapped[str] = mapped_column(String(255))
     postal_code: Mapped[str] = mapped_column(String(5))
     city: Mapped[str] = mapped_column(String(120))
-    # location (GeoPoint)
     latitude: Mapped[float] = mapped_column(Double)
     longitude: Mapped[float] = mapped_column(Double)
     contact_phone: Mapped[str] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-class Supplier(_ManagedEntity, Base):
-    """A food supplier (contract schema `Supplier`)."""
-
-    __tablename__ = "suppliers"
-    __table_args__ = (CheckConstraint(r"legal_id ~ '^\d{14}$'", name="legal_id_is_siret"),)
-
-    supplier_type: Mapped[SupplierType] = mapped_column(_str_enum(SupplierType, "supplier_type"))
-    # SIRET (14 digits)
-    legal_id: Mapped[str] = mapped_column(String(14), unique=True)
-
-    managers: Mapped[list["User"]] = relationship(back_populates="supplier")
-
-
-class Association(_ManagedEntity, Base):
-    """A charity (contract schema `Association`)."""
+class Association(Base):
+    """An association that reserves and collects lots."""
 
     __tablename__ = "associations"
-    __table_args__ = (CheckConstraint(r"legal_id ~ '^W\d{9}$'", name="legal_id_is_rna"),)
 
-    # RNA number (W + 9 digits)
-    legal_id: Mapped[str] = mapped_column(String(10), unique=True)
-
-    managers: Mapped[list["User"]] = relationship(back_populates="association")
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255))
+    legal_id: Mapped[str] = mapped_column(String(10), unique=True)  # n° RNA
+    street: Mapped[str] = mapped_column(String(255))
+    postal_code: Mapped[str] = mapped_column(String(5))
+    city: Mapped[str] = mapped_column(String(120))
+    latitude: Mapped[float] = mapped_column(Double)
+    longitude: Mapped[float] = mapped_column(Double)
+    contact_phone: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class User(Base):
     __tablename__ = "users"
+    # A manager runs either a supplier or an association; an admin runs neither.
     __table_args__ = (
-        # A user manages a supplier or an association, not both (contract `Me`).
-        CheckConstraint("supplier_id IS NULL OR association_id IS NULL", name="manages_one_entity"),
+        CheckConstraint(
+            "num_nonnulls(supplier_id, association_id) <= 1", name="at_most_one_organization"
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -86,13 +95,12 @@ class User(Base):
     firstname: Mapped[str] = mapped_column(String(255))
     lastname: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(_str_enum(UserRole, "user_role"))
-    # Contract `Me.supplier` / `Me.association`: null if the user does not manage one.
     supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"), index=True)
     association_id: Mapped[int | None] = mapped_column(ForeignKey("associations.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    supplier: Mapped[Supplier | None] = relationship(back_populates="managers")
-    association: Mapped[Association | None] = relationship(back_populates="managers")
+    supplier: Mapped[Supplier | None] = relationship()
+    association: Mapped[Association | None] = relationship()
 
     # The database deletes the request with its user (ON DELETE CASCADE).
     registration_request: Mapped["RegistrationRequest | None"] = relationship(
@@ -105,9 +113,19 @@ Index("uq_users_email_lower", func.lower(User.email), unique=True)
 
 
 class RegistrationRequest(Base):
-    """Registration of an organisation and its manager account (US-01)."""
+    """Registration of a supplier or an association and its manager account (US-01).
+
+    `organization_type` says which one is requested; the other columns describe it.
+    """
 
     __tablename__ = "registration_requests"
+    __table_args__ = (
+        # Only a supplier has a type of establishment.
+        CheckConstraint(
+            "(organization_type = 'supplier') = (supplier_type IS NOT NULL)",
+            name="supplier_type_for_suppliers_only",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     status: Mapped[RegistrationStatus] = mapped_column(
@@ -128,8 +146,9 @@ class RegistrationRequest(Base):
     city: Mapped[str] = mapped_column(String(120))
     contact_phone: Mapped[str] = mapped_column(String(20))
 
-    # Organisation created when an admin approves the request (no table yet).
-    organization_id: Mapped[int | None] = mapped_column(BigInteger)
+    # Supplier or association created when an admin approves the request.
+    supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"))
+    association_id: Mapped[int | None] = mapped_column(ForeignKey("associations.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -149,3 +168,44 @@ class RefreshToken(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped[User] = relationship()
+
+
+# Quantities in kg can be fractional: exact decimals, so that reservations never drift.
+Quantity = Numeric(12, 3)
+
+
+class Lot(Base):
+    """A lot of food published by a supplier (US-02).
+
+    `remaining_quantity` is what can still be reserved; the status is computed from it
+    and from the dates (see `app.lots.lot_status`).
+    """
+
+    __tablename__ = "lots"
+    __table_args__ = (
+        CheckConstraint("quantity > 0", name="quantity_positive"),
+        CheckConstraint(
+            "remaining_quantity >= 0 AND remaining_quantity <= quantity",
+            name="remaining_quantity_range",
+        ),
+        CheckConstraint("pickup_end > pickup_start", name="pickup_window"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    supplier_id: Mapped[int] = mapped_column(
+        ForeignKey("suppliers.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str] = mapped_column(String(120))
+    category: Mapped[LotCategory] = mapped_column(_str_enum(LotCategory, "lot_category"))
+    quantity: Mapped[Decimal] = mapped_column(Quantity)
+    remaining_quantity: Mapped[Decimal] = mapped_column(Quantity)
+    unit: Mapped[QuantityUnit] = mapped_column(_str_enum(QuantityUnit, "quantity_unit"))
+    divisible: Mapped[bool] = mapped_column(Boolean)
+    use_by_date: Mapped[date] = mapped_column(Date)
+    allergens: Mapped[list[str]] = mapped_column(ARRAY(String(32)), server_default=text("'{}'"))
+    storage: Mapped[Storage] = mapped_column(_str_enum(Storage, "storage"))
+    pickup_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    pickup_end: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    supplier: Mapped[Supplier] = relationship(lazy="joined")

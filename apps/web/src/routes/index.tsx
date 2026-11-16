@@ -1,28 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { GraphBackendStatus } from "@/components/graph-backend-status";
+import { Landing } from "@/components/landing/landing";
 
 export const Route = createFileRoute("/")({
-  component: HomeComponent,
+  head: () => ({
+    meta: [
+      { title: "Gaspirator — Le surplus des uns, le repas des autres" },
+      {
+        name: "description",
+        content:
+          "Gaspirator relie cantines, hôpitaux et supermarchés aux associations proches pour que leurs invendus alimentaires soient donnés plutôt que jetés.",
+      },
+      { name: "theme-color", content: "#060807" },
+    ],
+  }),
+  component: Landing,
 });
-
-function HomeComponent() {
-  return (
-    <div className="container mx-auto max-w-3xl px-4 py-10">
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">gaspirator</h1>
-        <p className="mt-1 text-sm text-muted-foreground">TanStack Router, postgres.</p>
-      </header>
-
-      <section className="rounded-lg border p-4">
-        <h2 className="mb-3 font-medium">Tasks</h2>
-        <p className="text-sm text-muted-foreground">
-          This stack has no database-backed task API yet. Replace this panel with your first
-          feature.
-        </p>
-      </section>
-
-      <footer className="mt-6 flex items-center gap-2 text-sm text-muted-foreground"></footer>
-    </div>
-  );
-}
