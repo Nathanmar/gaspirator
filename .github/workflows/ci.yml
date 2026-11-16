@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: ["main", "master"]
 
+permissions:
+  contents: read
+
 jobs:
   ci:
     name: Lint, Type Check & Build
@@ -32,3 +35,84 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+  audit-web:
+    name: CVE audit (web / TanStack)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Report only for now: findings never fail the pipeline, whatever the severity.
+      - name: pnpm audit
+        continue-on-error: true
+        run: pnpm audit
+
+  audit-python:
+    name: CVE audit (server / Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Export locked runtime dependencies
+        run: uv export --frozen --no-dev --no-hashes --no-emit-project -o requirements.txt
+      # Report only for now: findings never fail the pipeline, whatever the severity.
+      - name: pip-audit
+        continue-on-error: true
+        run: uvx pip-audit -r requirements.txt --no-deps --disable-pip
+
+  image:
+    name: Build & scan image (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: web
+            context: .
+            dockerfile: apps/web/Dockerfile.vite
+          - name: server
+            context: apps/server
+            dockerfile: apps/server/Dockerfile
+    env:
+      IMAGE_TAR: /tmp/gaspirator-${{ matrix.name }}.tar
+      REPORT: /tmp/trivy-${{ matrix.name }}.txt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          tags: gaspirator-${{ matrix.name }}:${{ github.sha }}
+          outputs: type=docker,dest=${{ env.IMAGE_TAR }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+      # 0.35.0 is the only trivy-action tag untouched by the March 2026 supply-chain attack;
+      # Trivy itself is pinned to v0.69.3 (last safe release before the compromised v0.69.4).
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          version: v0.69.3
+          input: ${{ env.IMAGE_TAR }}
+          format: table
+          output: ${{ env.REPORT }}
+          exit-code: "0"
+
+      - name: Add report to job summary
+        run: |
+          {
+            echo "### Trivy report: ${{ matrix.name }}"
+            echo '```'
+            cat "$REPORT"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
