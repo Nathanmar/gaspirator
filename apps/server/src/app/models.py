@@ -113,9 +113,19 @@ Index("uq_users_email_lower", func.lower(User.email), unique=True)
 
 
 class RegistrationRequest(Base):
-    """Registration of an organisation and its manager account (US-01)."""
+    """Registration of a supplier or an association and its manager account (US-01).
+
+    `organization_type` says which one is requested; the other columns describe it.
+    """
 
     __tablename__ = "registration_requests"
+    __table_args__ = (
+        # Only a supplier has a type of establishment.
+        CheckConstraint(
+            "(organization_type = 'supplier') = (supplier_type IS NOT NULL)",
+            name="supplier_type_for_suppliers_only",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     status: Mapped[RegistrationStatus] = mapped_column(
@@ -136,8 +146,9 @@ class RegistrationRequest(Base):
     city: Mapped[str] = mapped_column(String(120))
     contact_phone: Mapped[str] = mapped_column(String(20))
 
-    # Organisation created when an admin approves the request (no table yet).
-    organization_id: Mapped[int | None] = mapped_column(BigInteger)
+    # Supplier or association created when an admin approves the request.
+    supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"))
+    association_id: Mapped[int | None] = mapped_column(ForeignKey("associations.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

@@ -41,7 +41,7 @@ _MESSAGES: dict[str, str] = {
 }
 
 # Business-rule errors raised with `PydanticCustomError`: their message is already French.
-_CUSTOM_ERROR_PREFIXES = ("supplier_type_", "lot_")
+_CUSTOM_ERROR_PREFIXES = ("registration_", "lot_")
 
 
 def _field(loc: tuple[int | str, ...]) -> str:
@@ -101,10 +101,15 @@ async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
     )
 
 
+def _error_field(error: dict) -> str:
+    """Path of the invalid field; errors on a whole object may name it in `ctx.field`."""
+    field = _field(tuple(error["loc"]))
+    context_field = error.get("ctx", {}).get("field")
+    return ".".join(part for part in (field, context_field) if part) if context_field else field
+
+
 def _details(exc: RequestValidationError) -> list[ErrorDetail]:
-    return [
-        ErrorDetail(field=_field(tuple(err["loc"])), message=_message(err)) for err in exc.errors()
-    ]
+    return [ErrorDetail(field=_error_field(err), message=_message(err)) for err in exc.errors()]
 
 
 async def validation_exception_handler(

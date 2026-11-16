@@ -14,6 +14,7 @@ from pydantic import (
     ValidationInfo,
     field_serializer,
     field_validator,
+    model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -120,30 +121,19 @@ class SupplierSummary(BaseModel):
     contact_phone: str
 
 
-class OrganizationCreate(StrictModel):
-    type: OrganizationType
+class SupplierCreate(StrictModel):
     name: str = Field(min_length=2, max_length=255)
-    legal_id: str = Field(
-        pattern=r"^(\d{14}|W\d{9})$",
-        description="SIRET (14 chiffres) pour un fournisseur, n° RNA (W + 9 chiffres) pour une association",
-    )
-    supplier_type: SupplierType | None = Field(default=None, validate_default=True)
+    legal_id: str = Field(pattern=r"^\d{14}$", description="SIRET (14 chiffres)")
+    supplier_type: SupplierType
     address: Address
     contact_phone: str = Field(min_length=10, max_length=20)
 
-    @field_validator("supplier_type")
-    @classmethod
-    def supplier_type_matches_type(
-        cls, value: SupplierType | None, info: ValidationInfo
-    ) -> SupplierType | None:
-        org_type = info.data.get("type")
-        if org_type == OrganizationType.SUPPLIER and value is None:
-            raise PydanticCustomError("supplier_type_required", "obligatoire pour un fournisseur")
-        if org_type == OrganizationType.ASSOCIATION and value is not None:
-            raise PydanticCustomError(
-                "supplier_type_forbidden", "doit être null pour une association"
-            )
-        return value
+
+class AssociationCreate(StrictModel):
+    name: str = Field(min_length=2, max_length=255)
+    legal_id: str = Field(pattern=r"^W\d{9}$", description="N° RNA (W suivi de 9 chiffres)")
+    address: Address
+    contact_phone: str = Field(min_length=10, max_length=20)
 
 
 class AccountCreate(StrictModel):
@@ -160,16 +150,41 @@ class AccountSummary(BaseModel):
 
 
 class RegistrationRequestCreate(StrictModel):
-    organization: OrganizationCreate
+    """`SupplierRegistrationCreate` or `AssociationRegistrationCreate` of the contract.
+
+    One model with both keys optional rather than a union, so that the errors keep the
+    field paths of the body (`supplier.legal_id`, not the name of a union member).
+    """
+
+    supplier: SupplierCreate | None = None
+    association: AssociationCreate | None = None
     account: AccountCreate
+
+    @model_validator(mode="after")
+    def supplier_or_association(self) -> "RegistrationRequestCreate":
+        if self.supplier is None and self.association is None:
+            raise PydanticCustomError(
+                "registration_applicant_missing",
+                "obligatoire : un fournisseur (supplier) ou une association (association)",
+                {"field": "supplier"},
+            )
+        if self.supplier is not None and self.association is not None:
+            raise PydanticCustomError(
+                "registration_applicant_twice",
+                "une demande porte sur un fournisseur ou une association, pas les deux",
+                {"field": "association"},
+            )
+        return self
 
 
 class RegistrationRequest(BaseModel):
     id: int
     status: RegistrationStatus
-    organization: OrganizationCreate
+    supplier: SupplierCreate | None
+    association: AssociationCreate | None
     account: AccountSummary
-    organization_id: int | None
+    supplier_id: int | None
+    association_id: int | None
     created_at: datetime
     decided_at: datetime | None
 
