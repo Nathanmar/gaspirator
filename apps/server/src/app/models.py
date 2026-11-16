@@ -57,7 +57,7 @@ class RegistrationRequest(Base):
         _str_enum(OrganizationType, "organization_type")
     )
     organization_name: Mapped[str] = mapped_column(String(255))
-    legal_id: Mapped[str] = mapped_column(String(14))
+    legal_id: Mapped[str] = mapped_column(String(14), unique=True)
     supplier_type: Mapped[SupplierType | None] = mapped_column(
         _str_enum(SupplierType, "supplier_type")
     )

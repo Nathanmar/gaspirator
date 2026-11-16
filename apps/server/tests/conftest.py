@@ -6,6 +6,7 @@ Override it with `TEST_DATABASE_URL`.
 """
 
 import copy
+import itertools
 import os
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -147,6 +148,7 @@ def registration() -> dict:
 @pytest.fixture
 def create_user(db: Session) -> Callable[..., User]:
     """Insert a user. Managers get a registration request with the given status."""
+    legal_ids = itertools.count(19690103400017)  # unique SIRET per request
 
     def _create_user(
         email: str = "marie.dupont@example.org",
@@ -166,7 +168,7 @@ def create_user(db: Session) -> Callable[..., User]:
                 status=registration_status,
                 organization_type=OrganizationType.SUPPLIER,
                 organization_name="Cantine du lycée Ampère",
-                legal_id="19690103400017",
+                legal_id=str(next(legal_ids)),
                 supplier_type=SupplierType.CANTEEN,
                 street="12 rue de la République",
                 postal_code="69002",

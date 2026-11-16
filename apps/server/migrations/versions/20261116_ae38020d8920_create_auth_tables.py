@@ -138,6 +138,7 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_registration_requests")),
+        sa.UniqueConstraint("legal_id", name=op.f("uq_registration_requests_legal_id")),
         sa.UniqueConstraint("user_id", name=op.f("uq_registration_requests_user_id")),
     )
     # ### end Alembic commands ###
