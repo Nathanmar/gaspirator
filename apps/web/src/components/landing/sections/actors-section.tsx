@@ -1,17 +1,15 @@
 import { cn } from "@/lib/utils";
 
 import { AUDIENCES } from "../content";
-import { SectionLabel } from "../section-label";
 
 export function ActorsSection() {
   return (
     <section
       id="acteurs"
       data-stage
-      className="relative px-5 pt-[20vh] pb-[16vh] md:px-10 lg:pr-32 xl:pr-36"
+      className="relative px-5 pt-[20vh] pb-[16vh] md:px-10"
     >
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <SectionLabel index="04" title="Les acteurs" />
         <p data-reveal className="max-w-md text-cream/60 md:text-right">
           Un seul circuit, pour ceux qui donnent comme pour ceux qui récupèrent.
         </p>
@@ -39,7 +37,7 @@ export function ActorsSection() {
                 <h3 className="mt-6 font-display text-5xl leading-[0.9] font-bold tracking-[-0.04em] [font-stretch:80%] md:text-[4.6vw]">
                   {audience.title}
                 </h3>
-                <p className="mt-4 font-serif text-2xl text-cream/70 italic">{audience.who}</p>
+                <p className="mt-4 font-serif text-2xl text-cream/70">{audience.who}</p>
               </div>
               <ul className="divide-y divide-cream/10 border-y border-cream/10">
                 {audience.features.map((feature, i) => (

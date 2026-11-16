@@ -2,7 +2,6 @@ import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { STEPS, SUPPLIERS, type Supplier } from "../content";
-import { SectionLabel } from "../section-label";
 
 function PublishVisual() {
   return (
@@ -71,7 +70,7 @@ function ReserveVisual() {
   }, [initialId]);
 
   return (
-    <div className="relative h-full min-h-48 overflow-hidden rounded-2xl border border-cream/10 bg-[#0e0e0e] text-sm">
+    <div className="relative h-full min-h-48 overflow-hidden rounded-2xl border border-cream/10 bg-[#e9e4d8] text-sm">
       {/* MapLibre forces `position: relative` on its container, so size it explicitly. `isolate`
           keeps the raised (selected) pin under the donation row. */}
       <div ref={mapRef} className="isolate h-full w-full" />
@@ -141,19 +140,18 @@ export function CircuitSection() {
       id="circuit"
       data-stage
       data-circuit
-      className="hud-clear relative h-svh overflow-hidden"
+      className="relative h-svh overflow-hidden"
     >
       <div
         data-circuit-track
         className="grid h-full w-max grid-flow-col content-center gap-5 px-5 will-change-transform md:gap-8 md:px-10"
       >
         <div className="flex w-[84vw] shrink-0 flex-col justify-center md:w-[40vw]">
-          <SectionLabel index="03" title="Le circuit" className="mb-8" />
           <h2 className="font-display text-[13vw] leading-[0.86] font-bold tracking-[-0.045em] [font-stretch:80%] md:text-[6.4vw]">
             Du frigo
             <br />
             au{" "}
-            <span className="font-serif font-normal tracking-normal text-lime italic">repas</span>,
+            <span className="font-serif font-normal tracking-normal text-lime">repas</span>,
             <br />
             en quatre étapes.
           </h2>
@@ -190,7 +188,7 @@ export function CircuitSection() {
         <div className="w-[8vw] shrink-0 lg:w-36 xl:w-40" />
       </div>
 
-      <div className="absolute inset-x-5 bottom-16 h-px bg-cream/15 md:inset-x-10 md:bottom-20 lg:right-32 xl:right-36">
+      <div className="absolute inset-x-5 bottom-16 h-px bg-cream/15 md:inset-x-10 md:bottom-20">
         <div data-circuit-progress className="h-full origin-left scale-x-0 bg-lime" />
       </div>
     </section>

@@ -1,9 +1,7 @@
 import type { AnimationEvent, SyntheticEvent } from "react";
 
-import { NAV_LINKS, STAGES } from "./content";
+import { NAV_LINKS } from "./content";
 import { LogoMark } from "./logo-mark";
-
-const RULER_TICKS = Array.from({ length: 41 }, (_, i) => i);
 
 // The logo makes one quick turn each time the link is hovered or focused. A spin already under
 // way runs to its end rather than restarting, so the mark never jumps.
@@ -66,67 +64,6 @@ export function Hud() {
           </span>
         </a>
       </header>
-
-      <aside
-        data-hud
-        aria-hidden="true"
-        className="fixed top-1/2 right-5 z-40 hidden -translate-y-1/2 lg:block xl:right-10"
-      >
-        <div className="relative flex h-[46vh] gap-3">
-          <div className="flex h-full flex-col justify-between">
-            {RULER_TICKS.map((tick) => (
-              <span
-                key={tick}
-                className={tick % 10 === 0 ? "h-px w-4 bg-cream/60" : "h-px w-2 bg-cream/25"}
-              />
-            ))}
-          </div>
-          <div className="flex h-full flex-col justify-between py-0 font-mono text-[10px] leading-none tracking-[0.15em] text-cream/45">
-            {[100, 75, 50, 25, 0].map((value) => (
-              <span key={value} className="-my-[0.3em]">
-                {value}
-              </span>
-            ))}
-          </div>
-          <div data-ruler-marker className="absolute top-0 -left-3 flex items-center gap-2">
-            <span className="block h-0.5 w-9 bg-lime" />
-          </div>
-        </div>
-        <p className="mt-5 font-mono text-[10px] tracking-[0.2em] text-cream/45 uppercase">
-          Gaspi
-          <span data-ruler-value className="ml-2 inline-block w-[4ch] text-right text-lime">
-            100%
-          </span>
-        </p>
-      </aside>
-
-      <div
-        data-hud
-        data-stage-hud
-        aria-hidden="true"
-        className="fixed right-5 bottom-5 z-40 flex items-center gap-3 font-mono text-[11px] tracking-[0.18em] text-cream/60 uppercase transition-[translate] duration-700 ease-out md:right-10 md:bottom-8"
-      >
-        <span>
-          <span data-stage-index className="text-cream">
-            00
-          </span>
-          <span className="text-cream/35"> / 0{STAGES.length - 1}</span>
-        </span>
-        <span className="h-px w-8 bg-cream/30" />
-        <span data-stage-name>{STAGES[0].label}</span>
-      </div>
-
-      <div
-        data-scroll-hint
-        data-hidden
-        aria-hidden="true"
-        className="glass fixed bottom-5 left-1/2 z-40 hidden -translate-x-1/2 items-center gap-3 rounded-full py-2 pr-4 pl-2.5 font-mono text-[10px] tracking-[0.25em] text-cream/80 uppercase transition-opacity duration-500 md:bottom-8 md:flex"
-      >
-        <span className="relative flex h-6 w-4 justify-center rounded-full border border-cream/40">
-          <span className="scroll-dot mt-1 size-1 rounded-full bg-lime" />
-        </span>
-        Scroll
-      </div>
     </>
   );
 }

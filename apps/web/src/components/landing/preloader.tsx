@@ -1,34 +1,26 @@
-import { LogoMark } from "./logo-mark";
+import { Skeleton } from "@/components/ui/skeleton";
 
+// Skeleton of the hero layout, shown until the 3D scene and fonts are ready.
 export function Preloader() {
+  const block = "rounded-md bg-cream/10";
   return (
     <div
       data-preloader
-      className="fixed inset-0 z-[70] flex flex-col justify-between bg-ink px-5 py-5 [clip-path:inset(0_0_0_0)] md:px-10 md:py-8"
+      role="status"
+      aria-label="Chargement"
+      className="fixed inset-0 z-[70] flex flex-col bg-ink px-5 pt-4 md:px-10 md:pt-6"
     >
-      <div className="flex items-start justify-between font-mono text-[11px] tracking-[0.2em] text-cream/60 uppercase">
-        <span className="flex items-center gap-3">
-          <LogoMark className="h-8 w-auto" />
-          Gaspirator®
-        </span>
-        <span className="text-right">
-          Récupération
-          <br />
-          du surplus
-        </span>
+      <div className="flex items-center justify-between">
+        <Skeleton className={`${block} h-8 w-36`} />
+        <Skeleton className={`${block} hidden h-9 w-64 rounded-full md:block`} />
+        <Skeleton className={`${block} h-9 w-28 rounded-full`} />
       </div>
-      <div className="flex items-end justify-between gap-6">
-        <div className="mb-[2vw] h-px flex-1 bg-cream/15">
-          <div data-preloader-bar className="h-full origin-left scale-x-0 bg-lime" />
-        </div>
-        <div className="overflow-hidden">
-          <span
-            data-preloader-count
-            className="block font-display text-[26vw] leading-[0.8] font-bold tracking-[-0.05em] tabular-nums [font-stretch:75%] md:text-[19vw]"
-          >
-            000
-          </span>
-        </div>
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 pb-16">
+        <Skeleton className={`${block} h-4 w-64 md:h-5 md:w-80`} />
+        <Skeleton className={`${block} h-[min(15vw,19svh)] w-[min(80vw,62svh*1.4)]`} />
+        <Skeleton className={`${block} mt-2 h-8 w-[min(90vw,36rem)] md:h-12`} />
+        <Skeleton className={`${block} h-4 w-[min(85vw,30rem)]`} />
+        <Skeleton className={`${block} h-4 w-[min(70vw,22rem)]`} />
       </div>
     </div>
   );

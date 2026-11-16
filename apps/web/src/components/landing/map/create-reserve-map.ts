@@ -6,7 +6,7 @@ import { RESERVE_ORIGIN, SUPPLIERS, type Supplier } from "../content";
 setWorkerUrl(`/maplibre/maplibre-gl-worker.mjs?v=${getVersion()}`);
 
 // Same look as the Splits events map: CARTO Dark Matter (OpenStreetMap data).
-const STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const STYLE_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 function supplierPin(supplier: Supplier) {
   const element = document.createElement("button");

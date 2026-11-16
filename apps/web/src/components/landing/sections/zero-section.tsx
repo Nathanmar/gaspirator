@@ -4,25 +4,21 @@ import { cn } from "@/lib/utils";
 
 import { JOIN_LINKS } from "../content";
 import { LogoMark } from "../logo-mark";
-import { SectionLabel } from "../section-label";
-
-const MARQUEE = "Rien ne se perd — tout se donne — ";
 
 export function ZeroSection() {
   return (
     <section id="rejoindre" data-stage data-zero className="relative flex min-h-svh flex-col">
       <div className="flex min-h-svh flex-col items-center justify-center px-5 py-28 text-center">
-        <SectionLabel index="05" title="Objectif" className="mb-6" />
         <h2 className="relative">
           <span
             data-zero-top
-            className="block font-display text-[16vw] leading-[0.82] font-extrabold tracking-[-0.05em] [font-stretch:75%] md:text-[9vw]"
+            className="block font-display text-[16vw] leading-[0.9] font-extrabold tracking-[-0.04em] md:text-[9vw]"
           >
             Objectif
           </span>
           <span
             data-zero-word
-            className="block font-serif text-[38vw] leading-[0.72] text-lime italic md:text-[22vw]"
+            className="block font-display text-[16vw] leading-[0.9] font-extrabold tracking-[-0.04em] text-lime md:text-[9vw]"
           >
             zéro
           </span>
@@ -52,19 +48,7 @@ export function ZeroSection() {
       </div>
 
       <footer className="relative border-t border-cream/10 bg-ink/40 backdrop-blur-sm">
-        <div className="hud-clear overflow-hidden py-6 md:py-10" aria-hidden="true">
-          <div data-marquee className="flex w-max will-change-transform">
-            {[0, 1].map((copy) => (
-              <span
-                key={copy}
-                className="text-outline pr-[0.3em] font-display text-[18vw] leading-none font-extrabold whitespace-nowrap uppercase [font-stretch:75%] md:text-[11vw]"
-              >
-                {MARQUEE.repeat(2)}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="flex flex-col gap-4 border-t border-cream/10 px-5 py-6 font-mono text-[11px] tracking-[0.18em] text-cream/50 uppercase md:flex-row md:items-center md:justify-between md:px-10">
+        <div className="flex flex-col gap-4 px-5 py-6 font-mono text-[11px] tracking-[0.18em] text-cream/50 uppercase md:flex-row md:items-center md:justify-between md:px-10">
           <span className="flex items-center gap-2 text-cream">
             <LogoMark className="h-6 w-auto" />
             Gaspirator © {new Date().getFullYear()}

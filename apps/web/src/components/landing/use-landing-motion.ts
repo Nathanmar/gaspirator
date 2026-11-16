@@ -5,7 +5,6 @@ import { type RefObject, useEffect } from "react";
 
 import type { ParticleScene, SceneState } from "./scene/particle-scene";
 
-import { STAGES } from "./content";
 
 // Background glow behind the particles for each stage, as RGB.
 const GLOWS: [number, number, number][] = [
@@ -17,8 +16,6 @@ const GLOWS: [number, number, number][] = [
   [198, 244, 50],
 ];
 
-const damp = (current: number, target: number, lambda: number, dt: number) =>
-  current + (target - current) * (1 - Math.exp(-lambda * dt));
 
 /**
  * Wires the landing page: smooth scroll, scroll-driven 3D morphs, reveals, HUD and cursor.
@@ -76,10 +73,8 @@ export function useLandingMotion(
     let pageTrigger: ScrollTrigger | undefined;
     let diveTrigger: ScrollTrigger | undefined;
     let flowTrigger: ScrollTrigger | undefined;
-    let marquee: gsap.core.Tween | undefined;
 
     const preloader = q("[data-preloader]");
-    const count = q("[data-preloader-count]");
     const titleChars = qa("[data-hero] h1 [data-char]");
     const heroFades = qa("[data-hero-fade]");
     const hud = qa("[data-hud]");
@@ -93,32 +88,13 @@ export function useLandingMotion(
       gsap.set(heroFades, { opacity: 0, y: 24 });
       gsap.set(hud, { opacity: 0 });
 
-      const counter = { value: 0 };
-      const loadDuration = reducedMotion ? 0.4 : 2.2;
-      const loading = gsap
-        .timeline()
-        .to(counter, {
-          value: 100,
-          duration: loadDuration,
-          ease: "power2.inOut",
-          onUpdate: () => {
-            if (count) count.textContent = String(Math.round(counter.value)).padStart(3, "0");
-          },
-        })
-        .to("[data-preloader-bar]", { scaleX: 1, duration: loadDuration, ease: "power2.inOut" }, 0);
-
-      void Promise.all([loading.then(), sceneReady, document.fonts?.ready]).then(() => {
+      void Promise.all([sceneReady, document.fonts?.ready]).then(() => {
         if (disposed) return;
         ScrollTrigger.refresh();
         ctx.add(() => {
           gsap
             .timeline()
-            .to(count, { yPercent: -110, duration: 0.7, ease: "expo.in" })
-            .to(
-              preloader,
-              { clipPath: "inset(0% 0% 100% 0%)", duration: 1.1, ease: "expo.inOut" },
-              "-=0.15",
-            )
+            .to(preloader, { opacity: 0, duration: 0.4, ease: "power1.out" })
             .set(preloader, { display: "none" })
             .to(sceneState, { intro: 1, duration: 2.6, ease: "expo.out" }, 0.55)
             .to(titleChars, { yPercent: 0, duration: 1.3, ease: "expo.out", stagger: 0.045 }, 0.9)
@@ -256,27 +232,6 @@ export function useLandingMotion(
             ease: "none",
             scrollTrigger: { trigger: section, start: "top 85%", end: "top 35%", scrub: true },
           });
-          if (!reducedMotion) {
-            marquee = gsap.to(q("[data-marquee]", section), {
-              xPercent: -50,
-              duration: 36,
-              ease: "none",
-              repeat: -1,
-            });
-          }
-        }
-
-        for (const label of qa("[data-label]", section)) {
-          gsap
-            .timeline({
-              scrollTrigger: {
-                trigger: label,
-                start: "top 90%",
-                toggleActions: "play none none reverse",
-              },
-            })
-            .from(q("[data-label-line]", label), { scaleX: 0, duration: 1.2, ease: "expo.out" })
-            .from(label.children, { opacity: 0, duration: 0.8, stagger: 0.08 }, 0);
         }
 
         for (const element of qa("[data-reveal]", section)) {
@@ -315,16 +270,7 @@ export function useLandingMotion(
     }, root);
 
     // HUD, background glow and 3D scene, all driven from GSAP's ticker.
-    const marker = q("[data-ruler-marker]");
-    const rulerValue = q("[data-ruler-value]");
-    const stageIndex = q("[data-stage-index]");
-    const stageName = q("[data-stage-name]");
-    const stageHud = q("[data-stage-hud]");
-    let rulerHeight = marker?.parentElement?.clientHeight ?? 0;
-    let lastStage = -1;
-    let lastPercent = -1;
     let lastGlow = "";
-    let marqueeSpeed = 1;
 
     const tick = (time: number, deltaTime: number) => {
       lenis?.raf(time * 1000);
@@ -336,22 +282,7 @@ export function useLandingMotion(
       scene?.update(time, dt);
 
       const progress = pageTrigger?.progress ?? 0;
-      if (marker) marker.style.transform = `translate3d(0, ${progress * rulerHeight}px, 0)`;
-      const percent = Math.round((1 - progress) * 100);
-      if (rulerValue && percent !== lastPercent) {
-        rulerValue.textContent = `${percent}%`;
-        lastPercent = percent;
-      }
-
-      const stage = Math.min(STAGES.length - 1, Math.round(sceneState.morph));
-      if (stage !== lastStage) {
-        if (stageIndex) stageIndex.textContent = `0${stage}`;
-        if (stageName) stageName.textContent = STAGES[stage].label;
-        lastStage = stage;
-      }
       if (scrollHint && progress > 0.01) scrollHint.dataset.hidden = "";
-      // Make room for the footer links at the very bottom.
-      stageHud?.toggleAttribute("data-hidden", progress > 0.985);
 
       const from = Math.min(Math.floor(sceneState.morph), GLOWS.length - 2);
       const f = Math.min(Math.max(sceneState.morph - from, 0), 1);
@@ -362,19 +293,9 @@ export function useLandingMotion(
         root.style.setProperty("--glow", glow);
         lastGlow = glow;
       }
-
-      if (marquee && lenis) {
-        marqueeSpeed = damp(marqueeSpeed, 1 + Math.min(Math.abs(lenis.velocity) * 0.08, 5), 4, dt);
-        marquee.timeScale(marqueeSpeed);
-      }
     };
     gsap.ticker.add(tick);
 
-    const onRefresh = () => {
-      rulerHeight = marker?.parentElement?.clientHeight ?? 0;
-    };
-    ScrollTrigger.addEventListener("refresh", onRefresh);
-    cleanups.push(() => ScrollTrigger.removeEventListener("refresh", onRefresh));
     listen(window, "resize", () => scene?.resize());
 
     // Smooth in-page navigation.

@@ -80,10 +80,11 @@ varying float vAlpha;
 
 const float PI = 3.141592653589793;
 const float TAU = 6.283185307179586;
-const vec3 LIME = vec3(0.776, 0.957, 0.196);
-const vec3 TOMATO = vec3(1.0, 0.31, 0.18);
-const vec3 ORANGE = vec3(1.0, 0.56, 0.22);
-const vec3 CREAM = vec3(0.937, 0.914, 0.863);
+// Light mode: "CREAM" is the dark ink tone, lime is darkened to read on the paper background.
+const vec3 LIME = vec3(0.4, 0.62, 0.06);
+const vec3 TOMATO = vec3(0.89, 0.25, 0.11);
+const vec3 ORANGE = vec3(0.95, 0.5, 0.16);
+const vec3 CREAM = vec3(0.12, 0.15, 0.11);
 const vec3 SOIL = vec3(0.62, 0.5, 0.38);
 const vec3 ASH = vec3(0.66, 0.65, 0.6);
 const vec3 STEM = vec3(0.6, 0.42, 0.25);
@@ -272,6 +273,6 @@ void main() {
   float d = length(gl_PointCoord - 0.5);
   float a = smoothstep(0.5, 0.1, d);
   if (a < 0.01) discard;
-  gl_FragColor = vec4(0.937, 0.914, 0.863, a * vAlpha);
+  gl_FragColor = vec4(0.12, 0.15, 0.11, a * vAlpha);
 }
 `;

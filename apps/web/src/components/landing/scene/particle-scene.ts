@@ -1,5 +1,5 @@
 import {
-  AdditiveBlending,
+  NormalBlending,
   BufferAttribute,
   BufferGeometry,
   PerspectiveCamera,
@@ -110,7 +110,7 @@ export class ParticleScene {
       fragmentShader: particleFragment,
       transparent: true,
       depthWrite: false,
-      blending: AdditiveBlending,
+      blending: NormalBlending,
       uniforms: {
         uTime: { value: 0 },
         uMorph: { value: 0 },
@@ -143,7 +143,7 @@ export class ParticleScene {
       fragmentShader: dustFragment,
       transparent: true,
       depthWrite: false,
-      blending: AdditiveBlending,
+      blending: NormalBlending,
       uniforms: {
         uTime: { value: 0 },
         uScale: { value: 1 },

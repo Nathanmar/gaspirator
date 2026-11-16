@@ -1,12 +1,3 @@
-export const STAGES = [
-  { id: "top", label: "Surplus" },
-  { id: "constat", label: "Constat" },
-  { id: "aspiration", label: "Aspiration" },
-  { id: "circuit", label: "Circuit" },
-  { id: "acteurs", label: "Acteurs" },
-  { id: "rejoindre", label: "Objectif zéro" },
-] as const;
-
 export const NAV_LINKS = [
   { href: "#constat", label: "Constat" },
   { href: "#circuit", label: "Circuit" },
