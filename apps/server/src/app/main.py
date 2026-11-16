@@ -8,9 +8,12 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException, Header
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from app.settings import get_settings
 from app.auth import create_access_token, verify_token
+from app.errors import validation_exception_handler
+from app import registration
 
 
 load_dotenv()
@@ -38,6 +41,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+# Contract routes (openapi.yaml, server url: /api/v1)
+app.include_router(registration.router, prefix="/api/v1")
 
 
 @app.get("/")
