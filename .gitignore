@@ -53,3 +53,6 @@ temp
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# MapLibre worker, copied from node_modules by vite.config.ts
+apps/web/public/maplibre/

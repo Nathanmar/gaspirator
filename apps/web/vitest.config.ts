@@ -9,6 +9,8 @@ export default mergeConfig(
       environment: "jsdom",
       include: ["test/**/*.test.{ts,tsx}"],
       setupFiles: ["./test/setup.ts"],
+      // Fake API base URL (`.test` is a reserved TLD): tests never reach a real server.
+      env: { VITE_API_URL: "http://api.test" },
     },
   }),
 );

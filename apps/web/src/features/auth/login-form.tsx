@@ -1,19 +1,26 @@
-import type { z } from "zod";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
 
-import { useForm } from "@tanstack/react-form";
+import { BoundTextField } from "@/components/bound-fields";
+import { SubmitButton } from "@/components/form-controls";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { type LoginFormValues, loginSchema } from "./login-schema";
 
-import { loginSchema } from "./login-schema";
+const FIELDS = [
+  { name: "email", label: "E-mail", type: "email", autoComplete: "email" },
+  { name: "password", label: "Mot de passe", type: "password", autoComplete: "current-password" },
+] as const;
 
-type LoginValues = z.output<typeof loginSchema>;
+type LoginFormProps = {
+  // While the returned promise is pending, the submit button is disabled.
+  onSubmit: (values: LoginFormValues) => void | Promise<void>;
+};
 
-export function LoginForm({ onSubmit }: { onSubmit: (values: LoginValues) => void }) {
+export function LoginForm({ onSubmit }: LoginFormProps) {
   const form = useForm({
     defaultValues: { email: "", password: "" },
-    validators: { onSubmit: loginSchema },
+    // Validate on submit first, then on every change so an error goes away as soon as it is fixed.
+    validationLogic: revalidateLogic(),
+    validators: { onDynamic: loginSchema },
     // Parse again so the submitted email is trimmed, as the schema defines.
     onSubmit: ({ value }) => onSubmit(loginSchema.parse(value)),
   });
@@ -21,47 +28,25 @@ export function LoginForm({ onSubmit }: { onSubmit: (values: LoginValues) => voi
   return (
     <form
       noValidate
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-5"
       onSubmit={(e) => {
         e.preventDefault();
         void form.handleSubmit();
       }}
     >
-      {(
-        [
-          { name: "email", label: "E-mail", type: "email", autoComplete: "email" },
-          { name: "password", label: "Mot de passe", type: "password", autoComplete: "current-password" },
-        ] as const
-      ).map(({ name, label, type, autoComplete }) => (
+      {FIELDS.map(({ name, ...input }) => (
         <form.Field key={name} name={name}>
-          {(field) => {
-            const error = field.state.meta.errors[0]?.message;
-            const errorId = `${name}-error`;
-            return (
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor={name}>{label}</Label>
-                <Input
-                  id={name}
-                  name={name}
-                  type={type}
-                  autoComplete={autoComplete}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  aria-invalid={error ? true : undefined}
-                  aria-describedby={error ? errorId : undefined}
-                />
-                {error && (
-                  <p id={errorId} className="text-xs text-destructive">
-                    {error}
-                  </p>
-                )}
-              </div>
-            );
-          }}
+          {(field) => <BoundTextField field={field} {...input} />}
         </form.Field>
       ))}
-      <Button type="submit">Se connecter</Button>
+
+      <form.Subscribe selector={(state) => state.isSubmitting}>
+        {(isSubmitting) => (
+          <SubmitButton pending={isSubmitting} pendingLabel="Connexion…">
+            Se connecter
+          </SubmitButton>
+        )}
+      </form.Subscribe>
     </form>
   );
 }
