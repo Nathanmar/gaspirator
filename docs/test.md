@@ -88,7 +88,7 @@ Le corps d'une `Response` ne se lit qu'une fois : appeler le code testé une seu
 
 ### Données : `test/fixtures/`
 
-`tokens` (réponse de `POST /auth/login`), `registrationPayload` et `createdRegistration` (requête et réponse de `POST /registration-requests`). Elles sont typées avec les types du contrat (`satisfies`) : si le contrat change, `check-types` le signale.
+`tokens` (réponse de `POST /auth/login`), `supplierRegistration`, `associationRegistration` et `createdRegistration` (requêtes et réponse de `POST /registration-requests`). Elles sont typées avec les types du contrat (`satisfies`) : si le contrat change, `check-types` le signale.
 
 ## Écrire un test
 
@@ -202,8 +202,8 @@ Validation de l'inscription, alignée sur `RegistrationRequestCreate`. Sa sortie
 
 | Cas | Résultat attendu |
 | --- | ---------------- |
-| Fournisseur valide | Corps du contrat, sans la confirmation du mot de passe |
-| Association | `supplier_type` envoyé à `null` |
+| Fournisseur valide | `{ supplier, account }` (`SupplierCreate`), sans la confirmation du mot de passe |
+| Association valide | `{ association, account }` (`AssociationCreate`), sans type d'établissement |
 | Type d'organisation absent | « Choisissez le type de votre organisation. » |
 | Fournisseur avec un n° RNA | « Le SIRET doit contenir 14 chiffres. » |
 | Association avec un SIRET | « Le n° RNA doit commencer par W, suivi de 9 chiffres. » |
@@ -230,7 +230,8 @@ Inscription en deux étapes : le compte, puis l'organisation.
 | `?role=supplier` | Champs « SIRET » et « Type d'établissement » |
 | Lien de connexion | « Se connecter » mène à `/login` avec le même `role` |
 | Étape 2 vide | Erreurs affichées, aucune requête |
-| Formulaire valide | Corps du contrat envoyé, écran « Demande envoyée » |
+| Fournisseur valide | `{ supplier, account }` envoyé, écran « Demande envoyée » avec le nom saisi |
+| Association valide | `{ association, account }` envoyé, écran « Demande envoyée » avec le nom saisi (pas celui de la réponse : le mock renvoie toujours le même exemple) |
 | 409 | « Un compte existe déjà avec cette adresse e-mail, ce SIRET ou ce n° RNA. » |
 | Serveur injoignable | Message de `NetworkError` |
 
