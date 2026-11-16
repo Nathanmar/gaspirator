@@ -38,6 +38,7 @@ def test_register_association(client: TestClient, registration: dict):
     registration["organization"].update(
         {"type": "association", "legal_id": "W691234567", "supplier_type": None}
     )
+    registration["account"]["email"] = "asso.dupont@example.org"
     response = client.post(REGISTRATION_URL, json=registration)
 
     assert response.status_code == 201
