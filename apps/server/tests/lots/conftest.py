@@ -1,12 +1,15 @@
-"""Fixtures for the Lots tag: a supplier, the users allowed or not to use the routes and
-a valid `LotCreate` body."""
+"""Fixtures for the Lots tag: a supplier, the users allowed or not to use the routes, a
+valid `LotCreate` body and lots inserted in the database."""
 
+from collections.abc import Callable
 from datetime import timedelta
+from decimal import Decimal
 
 import pytest
+from sqlalchemy.orm import Session
 
-from app.models import Supplier
-from app.schemas import UserRole
+from app.models import Lot, Supplier
+from app.schemas import LotCategory, QuantityUnit, Storage, UserRole
 from tests.lots.helpers import at, iso, today
 
 
@@ -49,3 +52,34 @@ def lot_body() -> dict:
         "pickup_start": iso(at(tomorrow, 13)),
         "pickup_end": iso(at(tomorrow, 15)),
     }
+
+
+@pytest.fixture
+def create_lot(db: Session, supplier: Supplier) -> Callable[..., Lot]:
+    """Insert a lot of `supplier`, available tomorrow; keyword arguments override the columns."""
+
+    def _create_lot(**columns) -> Lot:
+        tomorrow = today() + timedelta(days=1)
+        quantity = Decimal(columns.pop("quantity", 30))
+        lot = Lot(
+            **{
+                "supplier": supplier,
+                "title": "Hachis parmentier",
+                "category": LotCategory.PREPARED_MEAL,
+                "quantity": quantity,
+                "remaining_quantity": quantity,
+                "unit": QuantityUnit.PORTIONS,
+                "divisible": True,
+                "use_by_date": tomorrow + timedelta(days=1),
+                "allergens": ["milk"],
+                "storage": Storage.REFRIGERATED,
+                "pickup_start": at(tomorrow, 13),
+                "pickup_end": at(tomorrow, 15),
+                **columns,
+            }
+        )
+        db.add(lot)
+        db.commit()
+        return lot
+
+    return _create_lot
