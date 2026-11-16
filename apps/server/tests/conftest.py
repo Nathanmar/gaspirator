@@ -178,3 +178,14 @@ def create_user(db: Session) -> Callable[..., User]:
         return user
 
     return _create_user
+
+
+@pytest.fixture
+def tokens(api: httpx2.Client, create_user) -> dict:
+    """`AuthTokens` of an approved manager, obtained with POST /auth/login."""
+    create_user(email="marie.dupont@example.org", password="testPass1.")
+    response = api.post(
+        "/auth/login", json={"email": "marie.dupont@example.org", "password": "testPass1."}
+    )
+    assert response.status_code == 200
+    return response.json()
