@@ -13,7 +13,7 @@ This file provides context about the project for AI assistants.
 
 ### Frontend
 
-- Framework: native-bare, tanstack-start
+- Framework: tanstack-router
 - CSS: tailwind
 - UI Library: daisyui
 - State: zustand
@@ -29,10 +29,9 @@ This file provides context about the project for AI assistants.
 ## Project Structure
 
 ```
-my-app/
+gaspirator/
 ├── apps/
 │   ├── web/         # Frontend application
-│   ├── native/      # Mobile application (React Native)
 ├── packages/
 │   └── db/          # Database schema
 ```
@@ -52,34 +51,22 @@ my-app/
 
 ### Stack Parts, ownership, and evidence
 
-- `backend.api:dotnet:minimal-api`. It belongs to `backend:dotnet:aspnet-mvc`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.auth:dotnet:aspnet-identity`. It belongs to `backend:dotnet:aspnet-mvc`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.caching:dotnet:redis`. It belongs to `backend:dotnet:aspnet-mvc`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.deploy:dotnet:docker`. It belongs to `backend:dotnet:aspnet-mvc`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.jobQueue:dotnet:hosted-services`. It belongs to `backend:dotnet:aspnet-mvc`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.libraries:dotnet:automapper`. It belongs to `backend:dotnet:aspnet-mvc`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.observability:dotnet:serilog`. It belongs to `backend:dotnet:aspnet-mvc`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.orm:dotnet:dapper`. It belongs to `backend:dotnet:aspnet-mvc`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.realtime:dotnet:signalr`. It belongs to `backend:dotnet:aspnet-mvc`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.testing:dotnet:xunit`. It belongs to `backend:dotnet:aspnet-mvc`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.validation:dotnet:data-annotations`. It belongs to `backend:dotnet:aspnet-mvc`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend:dotnet:aspnet-mvc`. Its generated target is `apps/server`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `codeQuality:universal:eslint`. Evidence is not mapped for this installed option.
-- `codeQuality:universal:prettier`. Evidence is not mapped for this installed option.
+- `backend.auth:python:jwt`. It belongs to `backend:python:fastapi`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `backend.codeQuality:python:ruff`. It belongs to `backend:python:fastapi`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `backend.packageManager:python:uv`. It belongs to `backend:python:fastapi`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `backend.validation:python:pydantic`. It belongs to `backend:python:fastapi`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `backend:python:fastapi`. Its generated target is `apps/server`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `containerOrchestration:universal:docker-compose`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
 - `continuousIntegration:universal:github-actions`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
 - `database:universal:postgres`. Its generated target is `packages/db`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `frontend.animation:typescript:gsap`. It belongs to `frontend:typescript:tanstack-start`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `frontend.css:typescript:tailwind`. It belongs to `frontend:typescript:tanstack-start`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `frontend.deploy:typescript:docker`. It belongs to `frontend:typescript:tanstack-start`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `frontend.forms:typescript:tanstack-form`. It belongs to `frontend:typescript:tanstack-start`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `frontend.httpClient:typescript:axios`. It belongs to `frontend:typescript:tanstack-start`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `frontend.stateManagement:typescript:zustand`. It belongs to `frontend:typescript:tanstack-start`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `frontend.ui:typescript:daisyui`. It belongs to `frontend:typescript:tanstack-start`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `frontend:typescript:tanstack-start`. Its generated target is `apps/web`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `gitHooks:universal:husky`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `mobile.deepLinking:react-native:expo-linking`. It belongs to `mobile:react-native:native-bare`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `mobile.navigation:react-native:expo-router`. It belongs to `mobile:react-native:native-bare`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `mobile:react-native:native-bare`. Its generated target is `apps/native`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `developerEnvironment:universal:devcontainer`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `frontend.animation:typescript:gsap`. It belongs to `frontend:typescript:tanstack-router`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `frontend.css:typescript:tailwind`. It belongs to `frontend:typescript:tanstack-router`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `frontend.forms:typescript:tanstack-form`. It belongs to `frontend:typescript:tanstack-router`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `frontend.stateManagement:typescript:zustand`. It belongs to `frontend:typescript:tanstack-router`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `frontend.ui:typescript:daisyui`. It belongs to `frontend:typescript:tanstack-router`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `frontend:typescript:tanstack-router`. Its generated target is `apps/web`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
+- `workspaceRunner:universal:turborepo`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
 
 ### Installed-version authority
 

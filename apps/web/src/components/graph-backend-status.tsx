@@ -9,7 +9,7 @@ export function GraphBackendStatus() {
 
   useEffect(() => {
     let active = true;
-    fetch(`${import.meta.env.VITE_SERVER_URL ?? "http://localhost:5000"}/`)
+    fetch(`${import.meta.env.VITE_SERVER_URL ?? "http://localhost:8000"}/health`)
       .then((response) => {
         if (active) setStatus(response.ok ? "connected" : "disconnected");
       })

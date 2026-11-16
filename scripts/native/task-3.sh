@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -e
 cd "$(dirname "$0")/../.."
-cd apps/server && dotnet build --no-restore
+cd apps/server && uv run --extra dev ruff check .

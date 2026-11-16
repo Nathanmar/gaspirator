@@ -1,0 +1,9 @@
+services:
+  devcontainer:
+    image: "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm"
+    command: sleep infinity
+    init: true
+    environment:
+      DEVCONTAINER: "true"
+    volumes:
+      - .:/workspaces/gaspirator:cached

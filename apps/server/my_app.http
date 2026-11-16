@@ -1,9 +1,0 @@
-@host = http://localhost:5000
-
-GET /
-Accept: application/json
-
-###
-
-GET /api/todos
-Accept: application/json

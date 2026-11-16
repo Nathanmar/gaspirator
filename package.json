@@ -7,48 +7,31 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "concurrently --kill-others \"pnpm --filter native dev\" \"pnpm --filter web dev\" \"cd apps/server && dotnet run\"",
-    "build": "pnpm -r build",
-    "check-types": "pnpm -r --if-present check-types",
-    "dev:web": "pnpm --filter web dev",
-    "dev:native": "pnpm --filter native dev",
-    "dev:server": "cd apps/server && dotnet run",
-    "setup:server": "cd apps/server && dotnet restore",
-    "check:server": "cd apps/server && dotnet build --no-restore",
-    "test:server": "cd apps/server && dotnet test",
-    "setup:part:backend:dotnet:aspnet-mvc": "cd apps/server && dotnet restore",
-    "dev:part:backend:dotnet:aspnet-mvc": "cd apps/server && dotnet run",
-    "check:part:backend:dotnet:aspnet-mvc": "cd apps/server && dotnet build --no-restore",
-    "test:part:backend:dotnet:aspnet-mvc": "cd apps/server && dotnet test",
-    "lint:eslint": "eslint .",
-    "format:prettier": "prettier --write .",
-    "format:prettier:check": "prettier --check .",
-    "test": "pnpm --filter web test",
-    "prepare": "husky"
+    "dev": "concurrently --kill-others \"turbo -F web dev\" \"pnpm dev:server\"",
+    "build": "turbo build",
+    "check-types": "turbo check-types",
+    "dev:web": "turbo -F web dev",
+    "dev:server": "uv --directory apps/server run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "setup:server": "uv --directory apps/server sync --extra dev",
+    "check:server": "uv --directory apps/server run --extra dev ruff check .",
+    "test:server": "uv --directory apps/server run --extra dev pytest",
+    "setup:part:backend:python:fastapi": "pnpm setup:server",
+    "dev:part:backend:python:fastapi": "pnpm dev:server",
+    "check:part:backend:python:fastapi": "pnpm check:server",
+    "test:part:backend:python:fastapi": "pnpm test:server",
+    "test": "pnpm --filter web test"
   },
   "dependencies": {
-    "@my-app/env": "workspace:*",
+    "@gaspirator/env": "workspace:*",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@my-app/config": "workspace:*",
+    "@gaspirator/config": "workspace:*",
     "@types/bun": "catalog:",
     "concurrently": "^9.2.1",
-    "eslint": "^10.12.0",
-    "globals": "^17.13.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^17.6.0",
-    "prettier": "^3.9.9",
-    "typescript": "catalog:",
-    "typescript-eslint": "^8.71.0"
+    "turbo": "2.10.11",
+    "typescript": "catalog:"
   },
-  "lint-staged": {
-    "**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,vue,astro,svelte}": [
-      "eslint --fix",
-      "prettier --write"
-    ]
-  },
-  "packageManager": "pnpm@10.8.0"
+  "packageManager": "pnpm@10.19.0"
 }

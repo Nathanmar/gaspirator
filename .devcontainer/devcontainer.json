@@ -1,0 +1,17 @@
+{
+  "name": "gaspirator",
+  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.devcontainer.yml"],
+  "service": "devcontainer",
+  "workspaceFolder": "/workspaces/gaspirator",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "runServices": ["devcontainer", "web", "app"],
+  "forwardPorts": [3001, 8000],
+  "postCreateCommand": "corepack enable && pnpm install && cd \"apps/server\" && python -m pip install -e '.[dev]'",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-azuretools.vscode-docker", "ms-python.python", "ms-python.vscode-pylance"]
+    }
+  }
+}
