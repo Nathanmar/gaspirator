@@ -35,11 +35,17 @@ function errorAt(values: RegisterFormValues, field: string) {
 }
 
 describe("registerSchema", () => {
-  it("turns valid supplier values into the contract payload, without the password confirmation", () => {
+  it("turns supplier values into a supplier registration, without the password confirmation", () => {
     const result = registerSchema.safeParse(supplier);
 
     expect(result.data).toEqual({
-      organization: supplier.organization,
+      supplier: {
+        name: "Cantine du lycée Ampère",
+        legal_id: "19690103400017",
+        supplier_type: "canteen",
+        address: { street: "12 rue de la République", postal_code: "69002", city: "Lyon" },
+        contact_phone: "04 78 00 00 00",
+      },
       account: {
         firstname: "Marie",
         lastname: "Dupont",
@@ -49,13 +55,25 @@ describe("registerSchema", () => {
     });
   });
 
-  it("sends a null establishment type for an association", () => {
+  it("turns association values into an association registration, without establishment type", () => {
     const result = registerSchema.safeParse(
       withOrganization({ type: "association", legal_id: "W691234567", supplier_type: "canteen" }),
     );
 
-    expect(result.success).toBe(true);
-    expect(result.data?.organization.supplier_type).toBeNull();
+    expect(result.data).toEqual({
+      association: {
+        name: "Cantine du lycée Ampère",
+        legal_id: "W691234567",
+        address: { street: "12 rue de la République", postal_code: "69002", city: "Lyon" },
+        contact_phone: "04 78 00 00 00",
+      },
+      account: {
+        firstname: "Marie",
+        lastname: "Dupont",
+        email: "marie.dupont@example.org",
+        password: "motdepasse",
+      },
+    });
   });
 
   it("requires the organization type", () => {
@@ -82,7 +100,7 @@ describe("registerSchema", () => {
   it("removes the spaces typed in the SIRET", () => {
     const result = registerSchema.safeParse(withOrganization({ legal_id: "196 901 034 00017" }));
 
-    expect(result.data?.organization.legal_id).toBe("19690103400017");
+    expect(result.data).toMatchObject({ supplier: { legal_id: "19690103400017" } });
   });
 
   it("requires the establishment type of a supplier", () => {

@@ -4,7 +4,7 @@ import { createRegistrationRequest, login } from "@/features/auth/auth-api";
 import { ApiError, NetworkError } from "@/lib/api-client";
 
 import { tokens } from "../../fixtures/auth";
-import { createdRegistration, registrationPayload } from "../../fixtures/registration";
+import { createdRegistration, supplierRegistration } from "../../fixtures/registration";
 import { jsonResponse, mockFetch } from "../../utils/fetch";
 
 const credentials = { email: "marie.dupont@example.org", password: "secret" };
@@ -124,12 +124,12 @@ describe("createRegistrationRequest", () => {
   it("posts the request to /registration-requests and returns the created request", async () => {
     const fetchMock = mockFetch(jsonResponse(201, createdRegistration));
 
-    const result = await createRegistrationRequest(registrationPayload);
+    const result = await createRegistrationRequest(supplierRegistration);
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("http://api.test/registration-requests");
     expect(init?.method).toBe("POST");
-    expect(JSON.parse(String(init?.body))).toEqual(registrationPayload);
+    expect(JSON.parse(String(init?.body))).toEqual(supplierRegistration);
     expect(result).toEqual(createdRegistration);
   });
 });

@@ -4,11 +4,15 @@ import { describe, expect, it, vi } from "vitest";
 
 import { RegisterPage } from "@/features/auth/register-page";
 
-import { createdRegistration, registrationPayload } from "../../fixtures/registration";
+import {
+  associationRegistration,
+  createdRegistration,
+  supplierRegistration,
+} from "../../fixtures/registration";
 import { jsonResponse, mockFetch, sentBody } from "../../utils/fetch";
 import { renderWithRouter } from "../../utils/render-with-router";
 
-// Step 1: the manager's account, with the values of `registrationPayload`.
+// Step 1: the manager's account, with the values of the fixtures.
 async function fillAccountStep() {
   await userEvent.type(await screen.findByLabelText("Prénom"), "Marie");
   await userEvent.type(screen.getByLabelText("Nom"), "Dupont");
@@ -18,7 +22,7 @@ async function fillAccountStep() {
   await userEvent.click(screen.getByRole("button", { name: "Continuer" }));
 }
 
-// Step 2: a supplier, with the values of `registrationPayload`.
+// Step 2: a supplier, with the values of `supplierRegistration`.
 async function fillSupplierStep() {
   await userEvent.type(
     await screen.findByLabelText("Nom de l'organisation"),
@@ -30,6 +34,19 @@ async function fillSupplierStep() {
   await userEvent.type(screen.getByLabelText("Code postal"), "69002");
   await userEvent.type(screen.getByLabelText("Ville"), "Lyon");
   await userEvent.type(screen.getByLabelText("Téléphone"), "04 78 00 00 00");
+}
+
+// Step 2: an association, with the values of `associationRegistration`.
+async function fillAssociationStep() {
+  await userEvent.type(
+    await screen.findByLabelText("Nom de l'organisation"),
+    "Restos du Cœur Lyon 2",
+  );
+  await userEvent.type(screen.getByLabelText("N° RNA"), "W691234567");
+  await userEvent.type(screen.getByLabelText("Adresse"), "12 rue de la République");
+  await userEvent.type(screen.getByLabelText("Code postal"), "69002");
+  await userEvent.type(screen.getByLabelText("Ville"), "Lyon");
+  await userEvent.type(screen.getByLabelText("Téléphone"), "04 78 00 00 01");
 }
 
 function submit() {
@@ -112,7 +129,7 @@ describe("RegisterPage", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("sends the request in the contract format and confirms it", async () => {
+  it("sends a supplier registration in the contract format and confirms it", async () => {
     const fetchMock = mockFetch(jsonResponse(201, createdRegistration));
     renderWithRouter(<RegisterPage role="supplier" />, { path: "/register" });
 
@@ -121,7 +138,23 @@ describe("RegisterPage", () => {
     await submit();
 
     expect(await screen.findByRole("heading", { name: "Demande envoyée" })).toBeInTheDocument();
-    expect(sentBody(fetchMock)).toEqual(registrationPayload);
+    expect(screen.getByText("Cantine du lycée Ampère")).toBeInTheDocument();
+    expect(sentBody(fetchMock)).toEqual(supplierRegistration);
+  });
+
+  it("sends an association registration in the contract format and confirms it", async () => {
+    // The mock server answers with a fixed example (here, a supplier's): the confirmation must
+    // repeat what was sent, not read the response.
+    const fetchMock = mockFetch(jsonResponse(201, createdRegistration));
+    renderWithRouter(<RegisterPage role="association" />, { path: "/register" });
+
+    await fillAccountStep();
+    await fillAssociationStep();
+    await submit();
+
+    expect(await screen.findByRole("heading", { name: "Demande envoyée" })).toBeInTheDocument();
+    expect(screen.getByText("Restos du Cœur Lyon 2")).toBeInTheDocument();
+    expect(sentBody(fetchMock)).toEqual(associationRegistration);
   });
 
   it("explains that the e-mail, SIRET or RNA number is already used (409)", async () => {
