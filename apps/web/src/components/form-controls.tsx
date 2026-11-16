@@ -153,18 +153,18 @@ export function ChoiceField<T extends string>({
 }
 
 export function SubmitButton({
-  pending,
+  pending = false,
   pendingLabel,
   children,
 }: {
-  pending: boolean;
+  pending?: boolean;
   // Replaces the label while the request is running, e.g. "Connexion…".
-  pendingLabel: string;
+  pendingLabel?: string;
   children: ReactNode;
 }) {
   return (
     <button type="submit" disabled={pending} className={primaryButtonClass}>
-      {pending ? pendingLabel : children}
+      {pending && pendingLabel ? pendingLabel : children}
       <span
         aria-hidden="true"
         className="grid size-10 place-items-center rounded-full bg-ink text-cream transition-transform duration-300 group-hover:rotate-45 group-disabled:rotate-0"

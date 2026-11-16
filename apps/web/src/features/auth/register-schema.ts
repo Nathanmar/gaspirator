@@ -62,8 +62,9 @@ const commonOrganizationFields = {
 // Spaces are allowed while typing ("196 901 034 00017") and removed before checking the format.
 const legalId = z.string().transform((value) => value.replace(/\s/g, "").toUpperCase());
 
-// One branch per organization type: the legal ID format and the establishment type depend on it.
-const organizationSchema = z.discriminatedUnion(
+// Step 2 of the form. One branch per organization type: the legal ID format and the establishment
+// type depend on it.
+export const organizationSchema = z.discriminatedUnion(
   "type",
   [
     z.object({
@@ -85,7 +86,8 @@ const organizationSchema = z.discriminatedUnion(
   { error: "Choisissez le type de votre organisation." },
 );
 
-const accountSchema = z
+// Step 1 of the form: the manager's account.
+export const accountSchema = z
   .object({
     firstname: z
       .string()
