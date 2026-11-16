@@ -32,7 +32,10 @@ class User(Base):
     role: Mapped[UserRole] = mapped_column(_str_enum(UserRole, "user_role"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    registration_request: Mapped["RegistrationRequest | None"] = relationship(back_populates="user")
+    # The database deletes the request with its user (ON DELETE CASCADE).
+    registration_request: Mapped["RegistrationRequest | None"] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
 
 
 # Case-insensitive unique e-mail.
