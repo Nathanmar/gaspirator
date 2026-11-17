@@ -14,7 +14,7 @@ import "../index.css";
 
 export type RouterAppContext = Record<string, never>;
 
-const FULL_BLEED_PATHS = new Set(["/", "/login", "/register"]);
+const FULL_BLEED_PATHS = new Set(["/", "/login", "/register", "/association"]);
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
 	component: RootComponent,

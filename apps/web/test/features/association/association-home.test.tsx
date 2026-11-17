@@ -134,7 +134,7 @@ describe("AssociationHome", () => {
 			});
 			expect(
 				within(radiuses).getByRole("link", { name: "10 km" }),
-			).toHaveAttribute("aria-current", "true");
+			).toHaveAttribute("aria-current", "page");
 			expect(
 				within(radiuses).getByRole("link", { name: "25 km" }),
 			).toHaveAttribute("href", "/association?radius_km=25");

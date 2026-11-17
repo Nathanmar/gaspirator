@@ -59,6 +59,12 @@ export class NetworkError extends Error {
 	}
 }
 
+/** A page of a paginated list (`page` and `per_page` parameters in the contract). */
+export type Page<T> = {
+	data: T[];
+	meta: { page: number; per_page: number; total: number };
+};
+
 type ApiRequestOptions = {
 	// The contract only uses these two methods.
 	method: "GET" | "POST";
