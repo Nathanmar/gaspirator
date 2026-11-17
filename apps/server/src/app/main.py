@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from app.settings import get_settings
+from app.db import ConcurrencyLimit
 from app.errors import ApiError, api_error_handler, validation_exception_handler
 from app import admin, auth_routes, lots, profile, registration, reservations, suppliers
 
@@ -32,6 +33,10 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# Inside CORS (the last middleware added is the outermost): never more requests to the API
+# in flight than database connections, see app.db.ConcurrencyLimit.
+app.add_middleware(ConcurrencyLimit, path_prefix=f"{settings.api_prefix}/")
 
 app.add_middleware(
     CORSMiddleware,

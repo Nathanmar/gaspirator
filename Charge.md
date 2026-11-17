@@ -1,6 +1,7 @@
 # Tests de charge de l'API
 
-Campagne du 17/11/2026 sur la branche `develop` (commit `1d0d72c`). Les scripts, le jeu de
+Campagne du 17/11/2026 sur la branche `develop` (commit `1d0d72c`), puis rejouée avec
+la correction de la branche `test/load-testing` (section « Après correction »). Les scripts, le jeu de
 données et les résultats bruts sont dans [`apps/server/loadtest/`](apps/server/loadtest/).
 
 ## Ce que l'on juge
@@ -101,6 +102,31 @@ Le débit plafonne autour de 145 req/s par processus. Au-delà de ~50 requêtes 
 ne se dégrade pas : il s'effondre. Les erreurs sont des 500
 `QueuePool limit of size 5 overflow 10 reached, connection timed out, timeout 30.00`.
 
+### Après correction
+
+Correctif dans `app/db.py` et `app/main.py`. Le middleware `ConcurrencyLimit` ne laisse
+entrer dans l'API que 20 requêtes à la fois, autant que de connexions dans le pool, lui-même
+porté explicitement à 10 + 10. Les requêtes en trop attendent leur tour de façon asynchrone,
+sans occuper de thread. Un thread n'attend donc plus jamais une connexion, et l'interblocage
+devient impossible (voir le point 2 de la conclusion).
+
+Mêmes scénarios, même machine, 1 processus (configuration du compose), image construite
+depuis cette branche. Résultats bruts dans `loadtest/results/after-fix/`.
+
+| Scénario | req/s | p95 | % erreur | Avant correction |
+| --- | --- | --- | --- | --- |
+| S3 — 50 connexions | 134 | 483 ms | 0 % | 135 req/s, p95 589 ms, 0 % |
+| S3 — 75 connexions (90 s) | 133 | 750 ms | **0 %** | 0,7 req/s, **71 %** |
+| S3 — 100 connexions (90 s) | 127 | 956 ms | **0 %** | 0,3 req/s, **81 %** |
+| S3 — 200 connexions (90 s) | 137 | 1 698 ms | **0 %** | 0,2 req/s, **91 %** |
+| S2 — locust, 200 utilisateurs | 117 | 2 100 ms | **0 %** (logins compris) | 9,7 req/s, p95 30 s, 5,9 % |
+| S1 — course, 50 associations × 20 lots | 205 (rafale) | 240 ms | 0 % — 20/20 lots corrects, 0 surréservation | 201 req/s, p95 290 ms, 20/20 |
+
+Aucune erreur `QueuePool … timed out` dans les logs. Au-delà de la capacité d'un processus
+(~135 req/s), le débit reste stable et c'est la latence qui monte, à mesure que la file
+d'attente s'allonge. C'est le comportement attendu d'un serveur saturé, au lieu du blocage
+complet observé avant.
+
 ## Conclusion
 
 1. **La réservation concurrente est correcte.** Sur 2 × 20 courses à 50 associations, il y a
@@ -109,7 +135,8 @@ ne se dégrade pas : il s'effondre. Les erreurs sont des 500
    verrou `SELECT … FOR UPDATE` sur le lot fait son travail, et la latence reste basse
    (p95 ≤ 290 ms).
 
-2. **Point bloquant : l'API se fige au-delà de ~50 requêtes simultanées par processus.** Ce
+2. **Point bloquant, corrigé (voir le point 3) : l'API se figeait au-delà de ~50 requêtes
+   simultanées par processus.** Ce
    n'est pas une lenteur mais un interblocage. Les routes et la dépendance `get_session` sont
    synchrones, donc FastAPI les exécute dans un pool de 40 threads, alors que le pool
    SQLAlchemy n'a que 15 connexions. Une requête qui a obtenu sa connexion (dans
@@ -121,21 +148,22 @@ ne se dégrade pas : il s'effondre. Les erreurs sont des 500
    seule rafale suffit à déclencher ce blocage, même quand le débit moyen reste sous la
    capacité. Il touche toutes les routes qui utilisent la base, login compris.
 
-3. **Corrections recommandées**, par ordre d'impact :
-   - **Rendre le pool cohérent avec le pool de threads**, dans `app/db.py`
-     (`create_engine(..., pool_size=20, max_overflow=20)`), ou limiter le nombre de requêtes
-     traitées en parallèle. On peut aussi réduire `pool_timeout` pour échouer vite plutôt que
-     de bloquer 30 s.
-   - **Ne pas déployer avec `reload=True` et un seul processus** : `python -m app.main` est
-     une commande de développement. Avec 4 workers, mesurés dans S4, le débit est ×2,4
-     (~330 req/s), et 200 utilisateurs locust passent sans erreur avec un p95 de 700 ms. C'est
-     un palliatif : chaque worker garde la même limite, qui ne fait que reculer, ici jusqu'à
-     ~200 connexions où les premiers 500 réapparaissent.
+3. **Correction appliquée** (voir « Après correction ») : on limite les requêtes de l'API en
+   cours au nombre de connexions du pool. Agrandir simplement le pool ne suffisait pas : avec
+   autant de connexions que de threads, l'interblocage reste possible (40 requêtes qui
+   gardent une connexion en attendant un thread, 40 threads qui attendent une connexion). Et
+   avec plusieurs workers, on dépasserait vite les 100 connexions de PostgreSQL. Avec 4
+   workers, il faut 4 × 20 = 80 connexions.
 
-4. **Capacité actuelle**, avec 1 processus et 500 fournisseurs : environ 145 recherches/s,
-   avec un p95 < 250 ms jusqu'à 25 requêtes simultanées. C'est largement suffisant pour
-   l'usage attendu (quelques dizaines d'associations), **à condition de corriger le point 2**.
-   Sinon, une seule rafale de requêtes rend l'API indisponible pendant au moins 30 s.
+4. **Recommandation de déploiement** : ne pas déployer avec `reload=True` et un seul
+   processus, car `python -m app.main` est une commande de développement. Avec 4 workers
+   (S4), le débit est ×2,4 (~330 req/s), et 200 utilisateurs locust passent avec un p95 de
+   700 ms.
+
+5. **Capacité**, avec 1 processus et 500 fournisseurs : environ 135 à 145 recherches/s, avec
+   un p95 < 500 ms jusqu'à 50 requêtes simultanées. C'est largement suffisant pour l'usage
+   attendu (quelques dizaines d'associations). Au-delà, les requêtes attendent leur tour au
+   lieu de faire tomber l'API.
 
 Limites de la campagne : les injecteurs tournent sur la même machine que l'API et la base,
 ce qui pénalise un peu les débits ; le réseau passe par Docker Desktop (WSL2) ; le jeu de
