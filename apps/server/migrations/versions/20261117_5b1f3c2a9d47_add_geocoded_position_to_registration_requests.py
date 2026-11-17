@@ -4,7 +4,7 @@ The contract geocodes the address on submission; the position is copied to the s
 or association `location` when an admin approves the request.
 
 Revision ID: 5b1f3c2a9d47
-Revises: 09c05c76d8ae
+Revises: 3b1f0c2a9d47
 Create Date: 2026-11-17 10:00:00.000000
 
 """
@@ -16,7 +16,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "5b1f3c2a9d47"
-down_revision: str | Sequence[str] | None = "09c05c76d8ae"
+down_revision: str | Sequence[str] | None = "3b1f0c2a9d47"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
