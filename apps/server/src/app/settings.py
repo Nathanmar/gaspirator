@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     access_token_ttl_seconds: int = 15 * 60
     refresh_token_ttl_seconds: int = 30 * 24 * 60 * 60
 
+    # Geocoding of the registration addresses (Géoplateforme of the IGN, no key needed)
+    geocoding_url: str = "https://data.geopf.fr/geocodage"
+    geocoding_timeout_seconds: float = 5
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -147,6 +147,10 @@ class RegistrationRequest(Base):
     street: Mapped[str] = mapped_column(String(255))
     postal_code: Mapped[str] = mapped_column(String(5))
     city: Mapped[str] = mapped_column(String(120))
+    # Position of the address, geocoded when the request is sent (null for the requests
+    # sent before geocoding existed). Copied to the supplier or association on approval.
+    latitude: Mapped[float | None] = mapped_column(Double)
+    longitude: Mapped[float | None] = mapped_column(Double)
     contact_phone: Mapped[str] = mapped_column(String(20))
 
     # Supplier or association created when an admin approves the request.
