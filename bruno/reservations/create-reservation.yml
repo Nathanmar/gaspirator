@@ -1,0 +1,24 @@
+info:
+  name: Create reservation
+  type: http
+  seq: 1
+http:
+  method: POST
+  url: "{{BASE_URL}}/lots/{{LOT_ID}}/reservations"
+  body:
+    type: json
+    # PICKUP_AT is set by lots/Create lot (inside its pickup window).
+    data: |-
+      {
+        "quantity": 5,
+        "pickup_at": "{{PICKUP_AT}}"
+      }
+  auth: inherit
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        if (res.status === 201) {
+          bru.setVar("RESERVATION_ID", res.body.id);
+          bru.setVar("PICKUP_CODE", res.body.pickup_code);
+        }

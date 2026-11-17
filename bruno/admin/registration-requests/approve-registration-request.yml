@@ -1,0 +1,8 @@
+info:
+  name: Approve registration request
+  type: http
+  seq: 2
+http:
+  method: POST
+  url: "{{BASE_ADMIN_URL_REGISTRATION}}/{{REQUEST_ID}}/approve"
+  auth: inherit

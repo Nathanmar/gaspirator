@@ -1,0 +1,14 @@
+info:
+  name: Logout
+  type: http
+  seq: 4
+http:
+  method: POST
+  url: "{{BASE_URL_AUTH}}/logout"
+  body:
+    type: json
+    data: |-
+      {
+        "refresh_token": "{{USER_REFRESH_TOKEN}}"
+      }
+  auth: inherit

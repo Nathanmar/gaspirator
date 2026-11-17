@@ -1,0 +1,10 @@
+info:
+  name: /lots
+  type: folder
+  seq: 4
+
+request:
+  auth: inherit
+  variables:
+    - name: BASE_URL_LOTS
+      value: "{{BASE_URL}}/lots"

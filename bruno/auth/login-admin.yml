@@ -1,0 +1,28 @@
+info:
+  name: Login admin
+  type: http
+  seq: 2
+http:
+  method: POST
+  url: "{{BASE_URL_AUTH}}/login"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{ADMIN_EMAIL}}",
+        "password": "{{ADMIN_PASSWORD}}"
+      }
+  auth:
+    type: none
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        if (res.status === 200) {
+          bru.setVar("ADMIN_TOKEN", res.body.access_token);
+          bru.setVar("ADMIN_REFRESH_TOKEN", res.body.refresh_token);
+        }
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"

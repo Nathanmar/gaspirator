@@ -1,0 +1,10 @@
+info:
+  name: /registration-requests
+  type: folder
+  seq: 2
+
+request:
+  auth: inherit
+  variables:
+    - name: BASE_URL_REGISTRATION
+      value: "{{BASE_URL}}/registration-requests"

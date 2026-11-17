@@ -1,0 +1,13 @@
+info:
+  name: /admin
+  type: folder
+  seq: 3
+
+request:
+  # Every /admin route uses the admin JWT (from `/auth/Login admin`).
+  auth:
+    type: bearer
+    token: "{{ADMIN_TOKEN}}"
+  variables:
+    - name: BASE_ADMIN_URL
+      value: "{{BASE_URL}}/admin"

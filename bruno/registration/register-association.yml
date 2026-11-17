@@ -1,0 +1,36 @@
+info:
+  name: Register association
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{BASE_URL_REGISTRATION}}"
+  body:
+    type: json
+    data: |-
+      {
+        "association": {
+          "name": "Restos du Cœur Lyon 2",
+          "legal_id": "W123456789",
+          "contact_phone": "04 78 00 00 01"
+        },
+        "account": {
+          "firstname": "Paul",
+          "lastname": "Martin",
+          "email": "paul.martin@example.org",
+          "password": "ChangeMe123!"
+        }
+      }
+
+runtime:
+  scripts:
+    - type: after-response
+      code: if (res.status === 201) bru.setVar("REQUEST_ID", res.body.id);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

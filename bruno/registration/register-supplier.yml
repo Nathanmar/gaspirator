@@ -1,0 +1,32 @@
+info:
+  name: Register supplier
+  type: http
+  seq: 1
+http:
+  method: POST
+  url: "{{BASE_URL_REGISTRATION}}"
+  body:
+    type: json
+    # address is optional: looked up from the SIRET when omitted.
+    data: |-
+      {
+        "supplier": {
+          "name": "Cantine du lycée Ampère",
+          "legal_id": "19690103400017",
+          "supplier_type": "canteen",
+          "contact_phone": "04 78 00 00 00"
+        },
+        "account": {
+          "firstname": "Marie",
+          "lastname": "Dupont",
+          "email": "marie.dupont@example.org",
+          "password": "ChangeMe123!"
+        }
+      }
+  auth:
+    type: none
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        if (res.status === 201) bru.setVar("REQUEST_ID", res.body.id);
