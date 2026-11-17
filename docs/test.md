@@ -325,8 +325,8 @@ Accueil de l'espace association (`/association`).
 | Cas | Résultat attendu |
 | --- | ---------------- |
 | Accueil | « Bonjour Marie » et le nom de l'association |
-| Collectes à venir | Réservations `booked`, la plus proche d'abord |
-| Contenu d'une collecte | Lot, quantité, conservation, fournisseur, plage de passage du lot (« mar. 3 nov., entre 14:00 et 16:00 ») |
+| Collectes à venir | Réservations `booked`, l'heure de passage la plus proche d'abord |
+| Contenu d'une collecte | Image du lot (illustration tant que le contrat n'a pas de photo), lot, quantité, conservation, fournisseur, heure de passage réservée (« mar. 3 nov. à 15:15 ») |
 | Code de collecte | Absent de l'accueil : toute la carte mène à `/association/reservations/{id}` |
 | Réservations collectées | Absentes de l'accueil : lien « Historique des collectes » vers `/association/history` |
 | Aucune collecte | « Aucune collecte prévue pour l'instant. » |
@@ -353,7 +353,7 @@ Page d'une collecte (`/association/reservations/{id}`), à ouvrir en allant cher
 | --- | ---------------- |
 | Lot | Titre, quantité, conservation, « À consommer jusqu'au mer. 4 nov. » |
 | Collecte à venir | Code en grand (« 482 913 ») et « Montrez ce code au fournisseur » |
-| Où et quand | Plage de passage, fournisseur et adresse |
+| Où et quand | Heure de passage réservée, créneau du fournisseur (« entre 14:00 et 16:00 »), fournisseur et adresse |
 | Itinéraire | Lien Google Maps vers la position du fournisseur, dans un nouvel onglet |
 | Téléphone | Lien `tel:` |
 | Retour | « Mes collectes » mène à `/association` |
@@ -363,7 +363,9 @@ Page d'une collecte (`/association/reservations/{id}`), à ouvrir en allant cher
 
 | Cas | Résultat attendu |
 | --- | ---------------- |
-| Liste | Réservations collectées seulement, la plus récente d'abord, avec la date de collecte |
+| Liste | Réservations collectées seulement, groupées par mois (« Novembre 2026 »), la plus récente d'abord |
+| Contenu | Lot, quantité, fournisseur, date de collecte |
+| Bilan | Nombre de collectes et total par unité (« 20 portions », « 5,5 kg ») ; pas d'unité à zéro |
 | Aucune | « Aucune collecte terminée pour l'instant. » |
 | Retour | « Mon espace » mène à `/association` |
 
@@ -384,6 +386,7 @@ Page d'une collecte (`/association/reservations/{id}`), à ouvrir en allant cher
 | Date et heure | Heure de Lyon, quel que soit le fuseau de l'appareil (« mar. 3 nov. à 15:15 », heure d'été comprise) |
 | Plage de passage | « mar. 3 nov., entre 14:00 et 16:00 » ; une seule heure si début = fin ; les deux jours si elle passe minuit |
 | Date seule (DLC) | « mer. 4 nov. », sans décalage de fuseau |
+| Mois | « Novembre 2026 », à l'heure de Lyon (le 31 octobre à 23:30 UTC est déjà en novembre) |
 | Code de collecte | Deux groupes de trois chiffres (« 482 913 ») |
 
 ### `Hud` — `src/components/landing/hud.tsx`

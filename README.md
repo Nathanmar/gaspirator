@@ -62,17 +62,17 @@ pnpm dev:web
 
 The web app (`http://localhost:5173`) talks to the API through the Prism validation proxy on `http://127.0.0.1:4010`, the default `VITE_API_URL`: Prism answers CORS for the dev server and checks every exchange against `openapi.yaml`. Stop `pnpm mock` first, both use port 4010.
 
-A new account stays `pending` until an admin approves it. Until the admin routes exist, approve one in the local database: like the approve route, this creates the association from the request (with the coordinates of its address, as there is no geocoding here) and links it to the request and the user.
+A new account stays `pending` until an admin approves it. Until the admin routes exist, approve one in the local database: like the approve route, this creates the association from the request (its address and geocoded position) and links it to the request and the user.
 
 ```sh
-docker compose exec -T db psql -U postgres -d gaspirator -v email=marie.dupont@example.org -v lat=45.7655 -v lon=4.8361 <<'SQL'
+docker compose exec -T db psql -U postgres -d gaspirator -v email=marie.dupont@example.org <<'SQL'
 begin;
 with request as (
   select r.* from registration_requests r join users u on u.id = r.user_id
   where lower(u.email) = lower(:'email')
 ), created as (
   insert into associations (name, legal_id, street, postal_code, city, latitude, longitude, contact_phone)
-  select organization_name, legal_id, street, postal_code, city, :lat, :lon, contact_phone from request
+  select organization_name, legal_id, street, postal_code, city, latitude, longitude, contact_phone from request
   returning id
 )
 update registration_requests
@@ -84,7 +84,7 @@ commit;
 SQL
 ```
 
-For a supplier, insert into `suppliers` (adding `supplier_type` to both column lists) and set `supplier_id` instead of `association_id`. The request needs an address: suppliers and associations cannot be created without one.
+For a supplier, insert into `suppliers` (adding `supplier_type` to both column lists) and set `supplier_id` instead of `association_id`. Requests sent before the address lookup may have no position: send them again.
 
 ## Connections
 
