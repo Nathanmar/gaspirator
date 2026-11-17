@@ -4,8 +4,10 @@ import { z } from "zod";
 export const env = createEnv({
   clientPrefix: "EXPO_PUBLIC_",
   client: {
-    EXPO_PUBLIC_SERVER_URL: z.url(),
+    // Base URL of the API contract (`servers` in `openapi.yaml`), without a trailing slash.
+    EXPO_PUBLIC_API_URL: z.url(),
   },
-  runtimeEnv: process.env,
+  // Expo only inlines variables read as `process.env.EXPO_PUBLIC_X`, so each one is listed by name.
+  runtimeEnv: { EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL },
   emptyStringAsUndefined: true,
 });
