@@ -24,9 +24,9 @@ export function ActorCards() {
               >
                 {audience.eyebrow}
               </p>
-              <h3 className="mt-3 font-display text-2xl leading-tight font-bold tracking-[-0.02em] md:text-4xl">
+              <h2 className="mt-3 font-display text-2xl leading-tight font-bold tracking-[-0.02em] md:text-4xl">
                 {audience.title}
-              </h3>
+              </h2>
             </div>
             <ul className="divide-y divide-cream/10 self-center border-y border-cream/10">
               {audience.features.map((feature, i) => (

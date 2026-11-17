@@ -24,7 +24,7 @@ function maplibreWorker(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [maplibreWorker(), tailwindcss(), tanstackRouter({}), react()],
+  plugins: [maplibreWorker(), tailwindcss(), tanstackRouter({ autoCodeSplitting: true }), react()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
@@ -32,5 +32,8 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+  },
+  build: {
+    sourcemap: true,
   },
 });

@@ -29,7 +29,8 @@ async function fillSupplierStep() {
     "Cantine du lycée Ampère",
   );
   await userEvent.type(screen.getByLabelText("SIRET"), "19690103400017");
-  await userEvent.selectOptions(screen.getByLabelText("Type d'établissement"), "Cantine");
+  await userEvent.click(screen.getByLabelText("Type d'établissement"));
+  await userEvent.click(await screen.findByRole("option", { name: "Cantine" }));
   await userEvent.type(screen.getByLabelText("Adresse"), "12 rue de la République");
   await userEvent.type(screen.getByLabelText("Code postal"), "69002");
   await userEvent.type(screen.getByLabelText("Ville"), "Lyon");

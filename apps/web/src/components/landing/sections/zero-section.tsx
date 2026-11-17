@@ -27,7 +27,7 @@ export function ZeroSection() {
       </div>
 
       <footer className="relative border-t border-cream/10 bg-ink/40 backdrop-blur-sm">
-        <div className="flex flex-col gap-4 px-5 py-6 font-mono text-[11px] tracking-[0.18em] text-cream/50 uppercase md:flex-row md:items-center md:justify-between md:px-10">
+        <div className="flex flex-col gap-4 px-5 py-6 font-mono text-[11px] tracking-[0.18em] text-cream/70 uppercase md:flex-row md:items-center md:justify-between md:px-10">
           <span className="flex items-center gap-2 text-cream">
             <LogoMark className="h-6 w-auto" />
             Gaspirator © {new Date().getFullYear()}
