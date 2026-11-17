@@ -153,3 +153,44 @@ def approve_registration_request(
 
     background_tasks.add_task(send_safely, mailer, _approved_email(request))
     return to_schema(request)
+
+
+def _rejected_email(request: models.RegistrationRequest) -> Email:
+    user = request.user
+    return Email(
+        to=user.email,
+        subject="Votre inscription sur Gaspirator est refusée",
+        body=(
+            f"Bonjour {user.firstname},\n\n"
+            f"La demande d'inscription de « {request.organization_name} » a été refusée.\n"
+            "Votre compte ne peut donc pas être utilisé.\n\n"
+            "L'équipe Gaspirator"
+        ),
+    )
+
+
+@router.post(
+    "/{requestId}/reject",
+    response_model=RegistrationRequest,
+    operation_id="rejectRegistrationRequest",
+    responses=_errors(401, 403, 404, 409),
+)
+def reject_registration_request(
+    request_id: RequestId,
+    _: CurrentAdmin,
+    session: DbSession,
+    mailer: AppMailer,
+    background_tasks: BackgroundTasks,
+) -> RegistrationRequest:
+    """Reject the request: nothing is created and the account cannot log in.
+
+    The applicant is told by e-mail, sent once the response is out.
+    """
+    request = _pending_request(session, request_id)
+    request.status = RegistrationStatus.REJECTED
+    request.decided_at = datetime.now(UTC)
+    session.commit()
+    session.refresh(request)
+
+    background_tasks.add_task(send_safely, mailer, _rejected_email(request))
+    return to_schema(request)
