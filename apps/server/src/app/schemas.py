@@ -321,6 +321,27 @@ class LotPage(BaseModel):
     meta: PageMeta
 
 
+class LotList(BaseModel):
+    data: list[Lot]
+
+
+# ----- Fournisseurs (US-03) -----
+
+
+class SupplierSearchResult(SupplierSummary):
+    distance_km: float
+    available_lots_count: int
+
+
+class SupplierSearchPage(BaseModel):
+    data: list[SupplierSearchResult]
+    meta: PageMeta
+
+
+class SupplierProfile(SupplierSummary):
+    available_lots_count: int
+
+
 # ----- Erreurs -----
 
 
