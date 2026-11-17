@@ -7,6 +7,31 @@ export function mockFetch(response: Response) {
 	return fetchMock;
 }
 
+/**
+ * Replaces fetch with a mock that answers by path (`/me`, `/suppliers`…), whatever the query
+ * string. Each call gets a fresh copy, as a body can only be read once.
+ */
+export function mockApi(responses: Record<string, Response>) {
+	const fetchMock = vi.fn<typeof fetch>(async (input) => {
+		const { pathname } = new URL(String(input));
+		const response = responses[pathname];
+		if (!response) throw new Error(`Unexpected request to ${pathname}`);
+		return response.clone();
+	});
+	globalThis.fetch = fetchMock;
+	return fetchMock;
+}
+
+/** Paths requested from the fetch mock, in order. */
+export function requestedPaths(
+	fetchMock: ReturnType<typeof vi.fn<typeof fetch>>,
+) {
+	return fetchMock.mock.calls.map(([input]) => {
+		const url = new URL(String(input));
+		return url.pathname + url.search;
+	});
+}
+
 export function jsonResponse(status: number, body: unknown) {
 	return new Response(JSON.stringify(body), {
 		status,
