@@ -1,7 +1,8 @@
 """POST /reservations/{reservationId}/confirm: 200 `Reservation`, 400, 401, 403, 404, 409,
 422 and 429 (format `Error`). Only for the supplier of the lot.
 
-The right pickup code makes the reservation `collected`. A wrong one is a 422; after 5 wrong
+The right pickup code makes the reservation `collected`, and the lot too once it is fully
+reserved and all its reservations are collected. A wrong code is a 422; after 5 wrong
 codes, confirming this reservation is blocked for 15 minutes (429).
 """
 
@@ -149,6 +150,80 @@ def test_confirm_reservation_made_through_the_api(
     seen = api.get(reservation_path(created["id"]), headers=association_headers).json()
     assert seen["status"] == "collected"
     assert seen["collected_at"] == response.json()["collected_at"]
+
+
+# ----- 200: status of the lot (`LotStatus`) -----
+
+
+def _lot_status(api: httpx2.Client, lot, headers: dict) -> str:
+    response = api.get(f"/lots/{lot.id}", headers=headers)
+    assert_contract(response)
+    return response.json()["status"]
+
+
+def test_lot_collected_once_every_reservation_is(
+    api: httpx2.Client,
+    supplier_headers: dict,
+    create_lot,
+    association,
+    create_association,
+    create_reservation,
+):
+    """A lot fully reserved is `collected` once all its reservations are."""
+    lot = create_lot(quantity=30)
+    first = create_reservation(lot, association, quantity=12)
+    second = create_reservation(lot, create_association(name="Secours populaire"), quantity=18)
+
+    assert _confirm(api, first, supplier_headers, first.pickup_code).status_code == 200
+    assert _lot_status(api, lot, supplier_headers) == "reserved"
+
+    assert _confirm(api, second, supplier_headers, second.pickup_code).status_code == 200
+    assert _lot_status(api, lot, supplier_headers) == "collected"
+
+
+def test_lot_collected_in_my_lots(
+    api: httpx2.Client, supplier_headers: dict, create_lot, association, create_reservation
+):
+    lot = create_lot(quantity=12)
+    reservation = create_reservation(lot, association, quantity=12)
+    _confirm(api, reservation, supplier_headers, reservation.pickup_code)
+
+    response = api.get("/me/lots", headers=supplier_headers)
+
+    assert_contract(response)
+    assert [item["status"] for item in response.json()["data"]] == ["collected"]
+
+
+def test_lot_partly_reserved_and_collected_stays_available(
+    api: httpx2.Client, supplier_headers: dict, booked: Reservation
+):
+    """Something is left to reserve: the lot is still `available`."""
+    _confirm(api, booked, supplier_headers, booked.pickup_code)
+
+    assert _lot_status(api, booked.lot, supplier_headers) == "available"
+
+
+def test_collected_lot_cannot_be_reserved(
+    api: httpx2.Client,
+    supplier_headers: dict,
+    association_headers: dict,
+    create_lot,
+    association,
+    create_reservation,
+):
+    lot = create_lot(quantity=12)
+    reservation = create_reservation(lot, association, quantity=12)
+    _confirm(api, reservation, supplier_headers, reservation.pickup_code)
+
+    response = api.post(
+        reservations_path(lot.id),
+        json={"quantity": 1, "pickup_at": iso(lot.pickup_start + timedelta(minutes=30))},
+        headers=association_headers,
+    )
+
+    assert_contract(response)
+    data = assert_error(response, 409, "conflict")
+    assert "entièrement réservé" in data["message"]
 
 
 # ----- 400 -----

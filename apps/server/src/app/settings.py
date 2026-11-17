@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     )
 
     # Application settings
-    app_name: str = "gaspirator"
+    app_name: str = "Gaspirator"
     debug: bool = False
     host: str = "0.0.0.0"
     port: int = 8000
@@ -34,6 +34,15 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-in-production"
     access_token_ttl_seconds: int = 15 * 60
     refresh_token_ttl_seconds: int = 30 * 24 * 60 * 60
+
+    # Geocoding of the registration addresses (Géoplateforme of the IGN, no key needed)
+    geocoding_url: str = "https://data.geopf.fr/geocodage"
+    geocoding_timeout_seconds: float = 5
+
+    # Address of the SIRET or RNA number of a registration sent without address
+    # (API Recherche d'entreprises, no key needed)
+    company_registry_url: str = "https://recherche-entreprises.api.gouv.fr"
+    company_registry_timeout_seconds: float = 10
 
 
 @lru_cache

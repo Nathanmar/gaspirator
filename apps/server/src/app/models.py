@@ -144,10 +144,16 @@ class RegistrationRequest(Base):
     supplier_type: Mapped[SupplierType | None] = mapped_column(
         _str_enum(SupplierType, "supplier_type")
     )
-    # Address: optional at registration, asked later.
+    # Address given or found from the SIRET / RNA number at registration (null only for
+    # requests sent before that lookup existed).
     street: Mapped[str | None] = mapped_column(String(255))
     postal_code: Mapped[str | None] = mapped_column(String(5))
     city: Mapped[str | None] = mapped_column(String(120))
+    # Position of the address, geocoded when the request is sent (null without address, or
+    # for the requests sent before geocoding existed). Copied to the supplier or association
+    # on approval.
+    latitude: Mapped[float | None] = mapped_column(Double)
+    longitude: Mapped[float | None] = mapped_column(Double)
     contact_phone: Mapped[str] = mapped_column(String(20))
 
     # Supplier or association created when an admin approves the request.
@@ -213,6 +219,10 @@ class Lot(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     supplier: Mapped[Supplier] = relationship(lazy="joined")
+    # Only loaded for the status of a fully reserved lot (`reserved` or `collected`).
+    reservations: Mapped[list["Reservation"]] = relationship(
+        back_populates="lot", passive_deletes=True
+    )
 
 
 class Reservation(Base):
@@ -250,5 +260,5 @@ class Reservation(Base):
     )
     confirmation_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    lot: Mapped[Lot] = relationship(lazy="joined")
+    lot: Mapped[Lot] = relationship(lazy="joined", back_populates="reservations")
     association: Mapped[Association] = relationship(lazy="joined")

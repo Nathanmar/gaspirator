@@ -20,6 +20,7 @@ from app.schemas import (
     LotPage,
     LotStatus,
     PageMeta,
+    ReservationStatus,
     SupplierSummary,
 )
 
@@ -48,12 +49,15 @@ def _errors(*status_codes: int) -> dict[int | str, dict]:
 
 
 def lot_status(lot: models.Lot, now: datetime) -> LotStatus:
-    """`LotStatus` of the contract, computed from the remaining quantity and the dates.
+    """`LotStatus` of the contract, computed from the remaining quantity, the dates and,
+    for a lot with nothing left to reserve, its reservations.
 
-    `collected` needs the reservations (US-04, US-05): until then, a lot with nothing left
-    to reserve is `reserved`.
+    A fully reserved lot is `collected` once all its reservations are, `reserved` until then.
     """
     if lot.remaining_quantity == 0:
+        reservations = lot.reservations
+        if reservations and all(r.status == ReservationStatus.COLLECTED for r in reservations):
+            return LotStatus.COLLECTED
         return LotStatus.RESERVED
     if lot.pickup_end <= now or lot.use_by_date < now.date():
         return LotStatus.EXPIRED

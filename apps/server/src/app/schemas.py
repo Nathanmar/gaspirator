@@ -172,7 +172,7 @@ class SupplierCreate(StrictModel):
     name: str = Field(min_length=2, max_length=255)
     legal_id: str = Field(pattern=r"^\d{14}$", description="SIRET (14 chiffres)")
     supplier_type: SupplierType
-    # Optional at registration, asked later.
+    # Optional at registration: found from the SIRET or RNA number (app.company_registry).
     address: Address | None = None
     contact_phone: str = Field(min_length=10, max_length=20)
 

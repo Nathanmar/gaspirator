@@ -132,6 +132,12 @@ def too_many_requests(message: str, retry_after: int) -> ApiError:
     return ApiError(429, "too_many_requests", message, headers={"Retry-After": str(retry_after)})
 
 
+def service_unavailable(message: str, retry_after: int) -> ApiError:
+    """503 when a service the API depends on fails. Not in the contract: like a 500, it is
+    nothing the client can fix, only retry."""
+    return ApiError(503, "service_unavailable", message, headers={"Retry-After": str(retry_after)})
+
+
 async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
     body = Error(code=exc.code, message=exc.message, details=exc.details)
     headers = _UNAUTHORIZED_HEADERS if exc.status_code == 401 else exc.headers
