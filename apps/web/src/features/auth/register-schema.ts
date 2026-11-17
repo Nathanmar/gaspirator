@@ -16,7 +16,6 @@ export type RegisterFormValues = {
 		name: string;
 		legal_id: string;
 		supplier_type: SupplierType | "";
-		address: { street: string; postal_code: string; city: string };
 		contact_phone: string;
 	};
 	account: {
@@ -37,30 +36,13 @@ export const SUPPLIER_TYPES = [
 
 // Bounds and patterns below come from `RegistrationRequestCreate` in the API contract.
 
-const addressSchema = z.object({
-	street: z
-		.string()
-		.trim()
-		.min(3, "L'adresse doit contenir au moins 3 caractères.")
-		.max(255, "L'adresse doit contenir au plus 255 caractères."),
-	postal_code: z
-		.string()
-		.trim()
-		.regex(/^\d{5}$/, "Le code postal doit contenir 5 chiffres."),
-	city: z
-		.string()
-		.trim()
-		.min(1, "La ville est obligatoire.")
-		.max(120, "La ville doit contenir au plus 120 caractères."),
-});
-
+// The address is not asked at registration: it is asked later.
 const commonOrganizationFields = {
 	name: z
 		.string()
 		.trim()
 		.min(2, "Le nom de l'organisation doit contenir au moins 2 caractères.")
 		.max(255, "Le nom de l'organisation doit contenir au plus 255 caractères."),
-	address: addressSchema,
 	contact_phone: z
 		.string()
 		.trim()
@@ -154,7 +136,6 @@ export const registerSchema = z
 		const fields = {
 			name: organization.name,
 			legal_id: organization.legal_id,
-			address: organization.address,
 			contact_phone: organization.contact_phone,
 		};
 

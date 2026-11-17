@@ -35,7 +35,9 @@ GEOCODING_RETRY_AFTER = 60  # seconds
 
 
 def _to_schema(request: models.RegistrationRequest) -> RegistrationRequest:
-    address = Address(street=request.street, postal_code=request.postal_code, city=request.city)
+    address = None
+    if request.street is not None:
+        address = Address(street=request.street, postal_code=request.postal_code, city=request.city)
     supplier = association = None
     if request.organization_type == OrganizationType.SUPPLIER:
         supplier = SupplierCreate(
@@ -110,16 +112,21 @@ def create_registration_request(
     if conflict is not None:
         raise ApiError(409, "conflict", conflict)
 
-    try:
-        position = geocoder.geocode(applicant.address)
-    except GeocodingUnavailable as exc:
-        raise service_unavailable(
-            "Le service de géolocalisation des adresses est indisponible, réessayez plus tard.",
-            retry_after=GEOCODING_RETRY_AFTER,
-        ) from exc
-    if position is None:
-        section = "supplier" if payload.supplier else "association"
-        raise invalid_fields([ErrorDetail(field=f"{section}.address", message=_ADDRESS_NOT_FOUND)])
+    address = applicant.address
+    position = None
+    if address is not None:
+        try:
+            position = geocoder.geocode(address)
+        except GeocodingUnavailable as exc:
+            raise service_unavailable(
+                "Le service de géolocalisation des adresses est indisponible, réessayez plus tard.",
+                retry_after=GEOCODING_RETRY_AFTER,
+            ) from exc
+        if position is None:
+            section = "supplier" if payload.supplier else "association"
+            raise invalid_fields(
+                [ErrorDetail(field=f"{section}.address", message=_ADDRESS_NOT_FOUND)]
+            )
 
     user = models.User(
         email=account.email,
@@ -137,11 +144,11 @@ def create_registration_request(
         organization_name=applicant.name,
         legal_id=applicant.legal_id,
         supplier_type=payload.supplier.supplier_type if payload.supplier else None,
-        street=applicant.address.street,
-        postal_code=applicant.address.postal_code,
-        city=applicant.address.city,
-        latitude=position.latitude,
-        longitude=position.longitude,
+        street=address.street if address else None,
+        postal_code=address.postal_code if address else None,
+        city=address.city if address else None,
+        latitude=position.latitude if position else None,
+        longitude=position.longitude if position else None,
         contact_phone=applicant.contact_phone,
     )
     session.add(request)

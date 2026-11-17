@@ -17,7 +17,8 @@ export type SupplierCreate = {
 	// SIRET: 14 digits.
 	legal_id: string;
 	supplier_type: SupplierType;
-	address: Address;
+	// Optional at registration, asked later.
+	address?: Address | null;
 	contact_phone: string;
 };
 
@@ -26,7 +27,7 @@ export type AssociationCreate = {
 	name: string;
 	// RNA number: W followed by 9 digits.
 	legal_id: string;
-	address: Address;
+	address?: Address | null;
 	contact_phone: string;
 };
 
@@ -86,8 +87,7 @@ export function login(credentials: LoginRequest): Promise<AuthTokens> {
 /**
  * `POST /registration-requests`: creates a `pending` request for a supplier or an association and
  * its manager.
- * A 409 means the e-mail, SIRET or RNA number is already used; a 422 a malformed field or an
- * address that cannot be found.
+ * A 409 means the e-mail, SIRET or RNA number is already used; a 422 a malformed field.
  */
 export function createRegistrationRequest(
 	request: RegistrationRequestCreate,

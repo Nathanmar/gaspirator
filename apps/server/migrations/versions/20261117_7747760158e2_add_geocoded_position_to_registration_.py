@@ -3,7 +3,7 @@
 Nullable: the requests sent before geocoding existed have no position.
 
 Revision ID: 7747760158e2
-Revises: 09c05c76d8ae
+Revises: 3b1f0c2a9d47
 Create Date: 2026-11-17 11:01:27.130024
 
 """
@@ -15,7 +15,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "7747760158e2"
-down_revision: str | Sequence[str] | None = "09c05c76d8ae"
+down_revision: str | Sequence[str] | None = "3b1f0c2a9d47"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

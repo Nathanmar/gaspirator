@@ -1,0 +1,119 @@
+name: Release
+
+# Release PR (develop -> main): everything runs, no path filter, audits block.
+# Merge on main: git-cliff computes the next version from conventional commits,
+# images are rescanned and published to GHCR, then the tag + GitHub Release are created.
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/webci.yml
+    with:
+      strict: true
+
+  server:
+    name: Server
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/serverci.yml
+    with:
+      strict: true
+
+  version:
+    name: Next version
+    if: github.event_name == 'push'
+    runs-on: ubuntu-26.04
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # git-cliff reads every commit since the last tag
+      # Same git-cliff version as the root devDependency, without a pnpm install.
+      - name: Compute version
+        id: bump
+        run: |
+          next=$(npx --yes git-cliff@2.14.2 --bumped-version)
+          # No feat/fix since the last release: git-cliff returns the existing tag, nothing to release.
+          if git rev-parse -q --verify "refs/tags/$next" >/dev/null; then
+            echo "No releasable commit since $next"
+            echo "version=" >> "$GITHUB_OUTPUT"
+          else
+            echo "Next version: $next"
+            echo "version=${next#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+  image-web:
+    name: Image web
+    needs: version
+    # version is skipped on PRs: run anyway, but not if it failed.
+    if: ${{ !cancelled() && needs.version.result != 'failure' }}
+    uses: ./.github/workflows/imageci.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      name: web
+      context: .
+      dockerfile: apps/web/Dockerfile.vite
+      strict: true
+      push: ${{ github.event_name == 'push' }}
+      version: ${{ needs.version.outputs.version }}
+
+  image-server:
+    name: Image server
+    needs: version
+    if: ${{ !cancelled() && needs.version.result != 'failure' }}
+    uses: ./.github/workflows/imageci.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      name: server
+      context: apps/server
+      dockerfile: apps/server/Dockerfile
+      strict: true
+      push: ${{ github.event_name == 'push' }}
+      version: ${{ needs.version.outputs.version }}
+
+  # Last, so a failed scan or push never leaves a release without its images.
+  release:
+    name: GitHub Release
+    needs: [version, image-web, image-server]
+    if: needs.version.outputs.version != ''
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    env:
+      TAG: v${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Release notes
+        run: npx --yes git-cliff@2.14.2 --unreleased --tag "$TAG" --strip all > notes.md
+      - name: Create tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes-file notes.md
+
+  codeql:
+    name: CodeQL
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, python, actions]
+    uses: ./.github/workflows/codeql.yml
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      language: ${{ matrix.language }}

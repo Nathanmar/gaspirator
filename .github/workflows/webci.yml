@@ -3,6 +3,11 @@ name: Web CI
 # Template called by ci.yml when apps/web, apps/mobile or the JS workspace change.
 on:
   workflow_call:
+    inputs:
+      strict:
+        description: Release mode, CVE audit fails on high/critical findings
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,10 +36,14 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Biome
+        if: ${{ !inputs.strict }}
         run: pnpm exec biome ci --changed --since=origin/develop --no-errors-on-unmatched
 
       - name: Type check
         run: pnpm run check-types
+
+      - name: Tests
+        run: pnpm test
 
       - name: Build
         run: pnpm run build
@@ -48,7 +57,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      # Report only for now: findings never fail the pipeline, whatever the severity.
+      # Report only on develop; on release (strict) high/critical findings fail.
       - name: pnpm audit
-        continue-on-error: true
-        run: pnpm audit
+        continue-on-error: ${{ !inputs.strict }}
+        run: pnpm audit ${{ inputs.strict && '--audit-level high' || '' }}

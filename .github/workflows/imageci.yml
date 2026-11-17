@@ -1,6 +1,8 @@
 name: Image CI
 
-# Template called by ci.yml: builds one Docker image and scans it with Trivy.
+# Template called by ci.yml and release.yml: builds one Docker image, scans it
+# with Trivy and, when `push` is set, publishes it to GHCR once the scan passed.
+# No `permissions` block: the job inherits the caller's (packages: write to push).
 on:
   workflow_call:
     inputs:
@@ -16,9 +18,18 @@ on:
         description: Path to the Dockerfile
         required: true
         type: string
-
-permissions:
-  contents: read
+      strict:
+        description: Release mode, Trivy fails on fixable high/critical CVEs
+        type: boolean
+        default: false
+      push:
+        description: Publish the image to ghcr.io after a passing scan
+        type: boolean
+        default: false
+      version:
+        description: Semver (1.4.2) to also tag the image with 1.4.2 and 1.4, empty for none
+        type: string
+        default: ""
 
 jobs:
   image:
@@ -48,9 +59,13 @@ jobs:
           input: ${{ env.IMAGE_TAR }}
           format: table
           output: ${{ env.REPORT }}
-          exit-code: "0"
+          # Strict: block only on CVEs that have a fix, unfixed base-image ones would block forever.
+          severity: ${{ inputs.strict && 'HIGH,CRITICAL' || 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL' }}
+          ignore-unfixed: ${{ inputs.strict }}
+          exit-code: ${{ inputs.strict && '1' || '0' }}
 
       - name: Add report to job summary
+        if: always()
         run: |
           {
             echo "### Trivy report: ${{ inputs.name }}"
@@ -58,3 +73,35 @@ jobs:
             cat "$REPORT"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Image tags
+        if: inputs.push
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/gaspirator-${{ inputs.name }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ inputs.version }},enable=${{ inputs.version != '' }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.version }},enable=${{ inputs.version != '' }}
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Log in to GHCR
+        if: inputs.push
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Same inputs as the build above, so every layer comes from the gha cache.
+      - name: Push image
+        if: inputs.push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ inputs.name }}

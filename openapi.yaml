@@ -593,7 +593,7 @@ components:
         # ----- Fournisseurs et associations -----
         SupplierCreate:
             type: object
-            required: [name, legal_id, supplier_type, address, contact_phone]
+            required: [name, legal_id, supplier_type, contact_phone]
             additionalProperties: false
             properties:
                 name: { type: string, minLength: 2, maxLength: 255, example: "Cantine du lycée Ampère" }
@@ -603,7 +603,11 @@ components:
                     pattern: '^\d{14}$'
                     example: "19690103400017"
                 supplier_type: { $ref: "#/components/schemas/SupplierType" }
-                address: { $ref: "#/components/schemas/Address" }
+                address:
+                    description: Facultative à l'inscription, demandée plus tard
+                    nullable: true
+                    anyOf:
+                        - $ref: "#/components/schemas/Address"
                 contact_phone: { type: string, minLength: 10, maxLength: 20, example: "04 78 00 00 00" }
 
         SupplierSummary:
@@ -647,7 +651,7 @@ components:
 
         AssociationCreate:
             type: object
-            required: [name, legal_id, address, contact_phone]
+            required: [name, legal_id, contact_phone]
             additionalProperties: false
             properties:
                 name: { type: string, minLength: 2, maxLength: 255, example: "Restos du Cœur Lyon 2" }
@@ -656,7 +660,11 @@ components:
                     description: N° RNA (W suivi de 9 chiffres)
                     pattern: '^W\d{9}$'
                     example: "W691234567"
-                address: { $ref: "#/components/schemas/Address" }
+                address:
+                    description: Facultative à l'inscription, demandée plus tard
+                    nullable: true
+                    anyOf:
+                        - $ref: "#/components/schemas/Address"
                 contact_phone: { type: string, minLength: 10, maxLength: 20, example: "04 78 00 00 01" }
 
         AssociationSummary:

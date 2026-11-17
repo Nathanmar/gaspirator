@@ -43,6 +43,7 @@ gaspirator/
 - `pnpm build` - Build for production
 - `pnpm test` - Run tests
 - `pnpm lint` - Biome check on `apps/web` and `apps/mobile` (also runs on staged files via the husky pre-commit hook + lint-staged)
+- `pnpm changelog` - Preview the unreleased changelog (git-cliff, `cliff.toml`); commit messages must follow Conventional Commits (commitlint `commit-msg` hook), they drive the release version
 - `pnpm db:push` - Push database schema
 - `pnpm db:studio` - Open database UI
 

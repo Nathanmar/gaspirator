@@ -37,12 +37,6 @@ async function fillSupplierStep() {
 	await userEvent.type(screen.getByLabelText("SIRET"), "19690103400017");
 	await userEvent.click(screen.getByLabelText("Type d'établissement"));
 	await userEvent.click(await screen.findByRole("option", { name: "Cantine" }));
-	await userEvent.type(
-		screen.getByLabelText("Adresse"),
-		"12 rue de la République",
-	);
-	await userEvent.type(screen.getByLabelText("Code postal"), "69002");
-	await userEvent.type(screen.getByLabelText("Ville"), "Lyon");
 	await userEvent.type(screen.getByLabelText("Téléphone"), "04 78 00 00 00");
 }
 
@@ -53,12 +47,6 @@ async function fillAssociationStep() {
 		"Restos du Cœur Lyon 2",
 	);
 	await userEvent.type(screen.getByLabelText("N° RNA"), "W691234567");
-	await userEvent.type(
-		screen.getByLabelText("Adresse"),
-		"12 rue de la République",
-	);
-	await userEvent.type(screen.getByLabelText("Code postal"), "69002");
-	await userEvent.type(screen.getByLabelText("Ville"), "Lyon");
 	await userEvent.type(screen.getByLabelText("Téléphone"), "04 78 00 00 01");
 }
 
@@ -226,7 +214,7 @@ describe("RegisterPage", () => {
 				message: "Certains champs sont invalides.",
 				details: [
 					{ field: "account.email", message: "adresse e-mail invalide" },
-					{ field: "supplier.address", message: "adresse introuvable" },
+					{ field: "supplier.contact_phone", message: "numéro invalide" },
 				],
 			}),
 		);
@@ -239,7 +227,7 @@ describe("RegisterPage", () => {
 		const alert = await screen.findByRole("alert");
 		expect(alert).toHaveTextContent("Certaines informations ont été refusées");
 		expect(alert).toHaveTextContent("E-mail : adresse e-mail invalide");
-		expect(alert).toHaveTextContent("Adresse : adresse introuvable");
+		expect(alert).toHaveTextContent("Téléphone : numéro invalide");
 	});
 
 	it("tells the user when the server cannot be reached", async () => {
