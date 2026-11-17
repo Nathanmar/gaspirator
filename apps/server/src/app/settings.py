@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     )
 
     # Application settings
-    app_name: str = "gaspirator"
+    app_name: str = "Gaspirator"
     debug: bool = False
     host: str = "0.0.0.0"
     port: int = 8000
