@@ -6,3 +6,13 @@ catalog:
   zod: ^4.6.5
   typescript: ^6.0.3
   "@types/bun": ^1.4.2
+overrides:
+  # postman-collection (via @stoplight/prism-cli) pins vulnerable lodash 4.17.21 and uuid 8.3.2
+  "postman-collection>lodash": ^4.18.0
+  "postman-collection>uuid": ^11.1.1
+  # @expo/fingerprint pins minimatch ^10 (vulnerable, patched in 11.0.1)
+  "@expo/fingerprint>minimatch": ^11.0.1
+auditConfig:
+  ignoreGhsas:
+    # shortcut: faker 5.5.3 pinned by postman-collection (dev-only prism mock, no untrusted input); faker>=10 breaks prism at load. Drop once postman-collection upgrades faker.
+    - GHSA-qxc2-j82w-r537
