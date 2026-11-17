@@ -1,6 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AssociationHome } from "@/features/association/association-home";
 import type { AssociationHomeData } from "@/features/association/association-loader";
 
@@ -14,6 +14,16 @@ import {
 	soonReservation,
 } from "../../fixtures/association";
 import { renderWithRouter } from "../../utils/render-with-router";
+
+// MapLibre needs WebGL, which jsdom lacks.
+vi.mock("@/components/landing/map/create-reserve-map", () => ({
+	createReserveMap: () => ({
+		remove() {},
+		select() {},
+		zoomIn() {},
+		zoomOut() {},
+	}),
+}));
 
 const home: AssociationHomeData = {
 	firstname: "Marie",
@@ -97,22 +107,25 @@ describe("AssociationHome", () => {
 	});
 
 	describe("suppliers around", () => {
-		it("lists the suppliers with lots to give, nearest first", async () => {
+		it("shows the nearest supplier with lots to give, then the next ones", async () => {
 			renderHome();
 
-			const list = await screen.findByRole("list", {
-				name: "Fournisseurs autour de vous",
+			const details = await screen.findByRole("region", {
+				name: "Fournisseur sélectionné",
 			});
-			const items = within(list).getAllByRole("listitem");
-			expect(items).toHaveLength(2);
-			expect(items[0]).toHaveTextContent("Cantine du lycée Ampère");
-			expect(items[0]).toHaveTextContent("Cantine");
-			expect(items[0]).toHaveTextContent("350 m");
-			expect(items[0]).toHaveTextContent("2 lots disponibles");
-			expect(items[0]).toHaveTextContent("31 rue de la Bourse, 69002 Lyon");
-			expect(items[1]).toHaveTextContent("Hôpital Édouard-Herriot");
-			expect(items[1]).toHaveTextContent("4,3 km");
-			expect(items[1]).toHaveTextContent("1 lot disponible");
+			expect(details).toHaveTextContent("Cantine du lycée Ampère");
+			expect(details).toHaveTextContent("Cantine");
+			expect(details).toHaveTextContent("350 m");
+			expect(details).toHaveTextContent("2 lots disponibles");
+			expect(details).toHaveTextContent("31 rue de la Bourse, 69002 Lyon");
+
+			await userEvent.click(
+				screen.getByRole("button", { name: "Fournisseur suivant" }),
+			);
+
+			expect(details).toHaveTextContent("Hôpital Édouard-Herriot");
+			expect(details).toHaveTextContent("4,3 km");
+			expect(details).toHaveTextContent("1 lot disponible");
 		});
 
 		it("lets the association call a supplier", async () => {
@@ -123,29 +136,16 @@ describe("AssociationHome", () => {
 			).toHaveAttribute("href", "tel:0478000000");
 		});
 
-		it("switches between the list and the map on the same page", async () => {
+		it("shows the suppliers on a map", async () => {
 			renderHome();
 
-			await userEvent.click(
-				await screen.findByRole("button", { name: "Carte" }),
-			);
-
 			expect(
+				await screen.findByRole("region", {
+					name: "Fournisseurs autour de vous",
+				}),
+			).toContainElement(
 				screen.getByRole("group", { name: "Carte des fournisseurs" }),
-			).toBeInTheDocument();
-			expect(
-				screen.queryByRole("list", { name: "Fournisseurs autour de vous" }),
-			).not.toBeInTheDocument();
-			expect(screen.getByRole("button", { name: "Carte" })).toHaveAttribute(
-				"aria-pressed",
-				"true",
 			);
-
-			await userEvent.click(screen.getByRole("button", { name: "Liste" }));
-
-			expect(
-				screen.getByRole("list", { name: "Fournisseurs autour de vous" }),
-			).toBeInTheDocument();
 		});
 
 		it("offers other search radiuses and marks the current one", async () => {
@@ -165,6 +165,9 @@ describe("AssociationHome", () => {
 		it("suggests a wider radius when no supplier is close enough", async () => {
 			renderHome({ suppliers: firstPage([]) });
 
+			expect(
+				await screen.findByRole("group", { name: "Carte des fournisseurs" }),
+			).toBeInTheDocument();
 			expect(
 				await screen.findByText(
 					"Aucun fournisseur n'a de lot disponible à moins de 10 km.",

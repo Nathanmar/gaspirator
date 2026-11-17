@@ -1,7 +1,9 @@
 import { Check } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
-import { STEPS, SUPPLIERS, type Supplier } from "../content";
+import { RESERVE_ORIGIN, STEPS, SUPPLIERS } from "../content";
+import type { MapPin } from "../map/create-reserve-map";
+import { mapRowClass, ReserveMapCard } from "../map/reserve-map-card";
 
 function PublishVisual() {
 	return (
@@ -33,57 +35,26 @@ function PublishVisual() {
 	);
 }
 
+const RESERVE_PINS: MapPin[] = SUPPLIERS.map((supplier) => ({
+	id: supplier.id,
+	label: supplier.shortName,
+	ariaLabel: `${supplier.name}, ${supplier.portions} portions`,
+	lngLat: supplier.lngLat,
+}));
+
 function ReserveVisual() {
-	const mapRef = useRef<HTMLDivElement>(null);
-	const [selectedId, setSelectedId] = useState<Supplier["id"]>(SUPPLIERS[0].id);
+	const [selectedId, setSelectedId] = useState<MapPin["id"]>(SUPPLIERS[0].id);
 	const selected =
 		SUPPLIERS.find((supplier) => supplier.id === selectedId) ?? SUPPLIERS[0];
-	// The map owns the pins; it only needs the starting selection.
-	const initialId = useRef(selectedId).current;
-
-	// The map (a second WebGL context plus tiles) is only created once the card gets close.
-	useEffect(() => {
-		const container = mapRef.current;
-		if (!container) return;
-		let cleanup: (() => void) | undefined;
-		let cancelled = false;
-		const observer = new IntersectionObserver(
-			([entry]) => {
-				if (!entry.isIntersecting) return;
-				observer.disconnect();
-				import("../map/create-reserve-map")
-					.then(({ createReserveMap }) => {
-						if (!cancelled) {
-							cleanup = createReserveMap(container, {
-								selectedId: initialId,
-								onSelect: setSelectedId,
-							});
-						}
-					})
-					.catch((error: unknown) =>
-						console.warn("Reserve map unavailable", error),
-					);
-			},
-			{ rootMargin: "100%" },
-		);
-		observer.observe(container);
-		return () => {
-			cancelled = true;
-			observer.disconnect();
-			cleanup?.();
-		};
-	}, [initialId]);
 
 	return (
-		<div className="relative h-full min-h-48 overflow-hidden rounded-2xl border border-cream/10 bg-[#e9e4d8] text-sm">
-			{/* MapLibre forces `position: relative` on its container, so size it explicitly. `isolate`
-          keeps the raised (selected) pin under the donation row. */}
-			<div ref={mapRef} className="isolate h-full w-full" />
-			{/* Map data credit, required by the OpenStreetMap and CARTO licences. */}
-			<p className="pointer-events-none absolute top-1.5 right-2 font-mono text-[8px] tracking-wide text-cream/70">
-				© OpenStreetMap · CARTO
-			</p>
-			<div className="absolute inset-x-2 bottom-2 flex items-center justify-between gap-3 rounded-xl border border-cream/10 bg-ink/85 py-2 pr-2 pl-3 backdrop-blur-md">
+		<ReserveMapCard
+			origin={RESERVE_ORIGIN}
+			pins={RESERVE_PINS}
+			selectedId={selectedId}
+			onSelect={setSelectedId}
+		>
+			<div className={mapRowClass}>
 				<div
 					key={selected.id}
 					aria-live="polite"
@@ -98,7 +69,7 @@ function ReserveVisual() {
 					Réserver
 				</span>
 			</div>
-		</div>
+		</ReserveMapCard>
 	);
 }
 
