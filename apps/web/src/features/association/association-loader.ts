@@ -22,7 +22,7 @@ export const associationSearchSchema = z.object({
 	radius_km: z.literal(RADIUS_OPTIONS).optional().catch(undefined),
 });
 
-export type AssociationAccount = {
+type AssociationAccount = {
 	firstname: string;
 	association: Association;
 };

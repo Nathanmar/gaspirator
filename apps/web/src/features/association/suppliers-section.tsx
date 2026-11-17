@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { List, Map as MapIcon } from "lucide-react";
 import { useState } from "react";
 
+import type { GeoPoint } from "@/features/auth/auth-api";
 import type { Page } from "@/lib/api-client";
 import { pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -29,7 +30,7 @@ export function SuppliersSection({
 }: {
 	suppliers: Page<SupplierSearchResult>;
 	radius: number;
-	center: { latitude: number; longitude: number };
+	center: GeoPoint;
 }) {
 	const [view, setView] = useState<View>("list");
 	const widerRadius = RADIUS_OPTIONS.find((option) => option > radius);

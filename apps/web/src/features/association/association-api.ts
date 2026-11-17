@@ -13,7 +13,6 @@ export type SupplierSearchResult = SupplierSummary & {
 	available_lots_count: number;
 };
 
-/** A lot as it appears in a reservation. */
 export type LotSummary = {
 	id: number;
 	title: string;

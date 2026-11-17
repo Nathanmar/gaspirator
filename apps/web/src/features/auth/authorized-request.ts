@@ -3,7 +3,6 @@ import { ApiError, apiRequest } from "@/lib/api-client";
 import { type AuthTokens, refreshTokens } from "./auth-api";
 import { useAuthStore } from "./auth-store";
 
-/** There is no session left to use: the user has to log in again. */
 export class SessionExpiredError extends Error {
 	constructor() {
 		super("Votre session a expiré. Reconnectez-vous.");

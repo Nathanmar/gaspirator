@@ -31,7 +31,9 @@ function byMonth(reservations: Reservation[]) {
 	const months = new Map<string, Reservation[]>();
 	for (const reservation of reservations) {
 		const month = formatMonth(collectedAt(reservation));
-		months.set(month, [...(months.get(month) ?? []), reservation]);
+		const items = months.get(month) ?? [];
+		items.push(reservation);
+		months.set(month, items);
 	}
 	return [...months];
 }

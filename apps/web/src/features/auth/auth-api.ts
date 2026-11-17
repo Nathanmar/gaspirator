@@ -11,9 +11,8 @@ export type SupplierType = "canteen" | "hospital" | "supermarket" | "other";
 
 export type Address = { street: string; postal_code: string; city: string };
 
-type GeoPoint = { latitude: number; longitude: number };
+export type GeoPoint = { latitude: number; longitude: number };
 
-/** What associations see of a supplier. */
 export type SupplierSummary = {
 	id: number;
 	name: string;
@@ -23,7 +22,6 @@ export type SupplierSummary = {
 	contact_phone: string;
 };
 
-/** What suppliers see of an association. */
 export type AssociationSummary = {
 	id: number;
 	name: string;
@@ -37,7 +35,6 @@ type OrganizationDetails = { legal_id: string; created_at: string };
 export type Supplier = SupplierSummary & OrganizationDetails;
 export type Association = AssociationSummary & OrganizationDetails;
 
-/** `GET /me`: the logged-in user, with the supplier or the association they run. */
 export type Me = {
 	id: number;
 	email: string;

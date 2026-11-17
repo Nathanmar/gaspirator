@@ -2,7 +2,7 @@ import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
 import { LoaderCircle } from "lucide-react";
 
 import { FormAlert } from "@/components/form-controls";
-import { ApiError, NetworkError } from "@/lib/api-client";
+import { ApiError, FALLBACK_MESSAGE, NetworkError } from "@/lib/api-client";
 
 export function PagePending() {
 	return (
@@ -18,7 +18,7 @@ export function PageError({ error }: ErrorComponentProps) {
 	const message =
 		error instanceof ApiError || error instanceof NetworkError
 			? error.message
-			: "Une erreur inattendue est survenue. Réessayez plus tard.";
+			: FALLBACK_MESSAGE;
 
 	return (
 		<div className="flex max-w-md flex-col items-start gap-4 pt-10">

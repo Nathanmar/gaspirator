@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { LogoMark } from "@/components/landing/logo-mark";
 import { useLogout } from "@/features/auth/use-logout";
 
-/** Shell of the logged-in spaces, in the landing page's visual identity. */
 export function SpaceLayout({ children }: { children: ReactNode }) {
 	const logOut = useLogout();
 	const navigate = useNavigate();

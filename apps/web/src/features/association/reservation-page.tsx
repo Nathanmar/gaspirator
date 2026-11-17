@@ -1,5 +1,6 @@
 import { ArrowUpRight, CircleCheck, Clock, MapPin } from "lucide-react";
 
+import type { GeoPoint } from "@/features/auth/auth-api";
 import {
 	formatAddress,
 	formatDate,
@@ -22,15 +23,12 @@ import {
 } from "./space-ui";
 
 // Google Maps universal link: opens the app on a phone, the website elsewhere.
-function directionsUrl({
-	latitude,
-	longitude,
-}: Reservation["lot"]["supplier"]["location"]) {
+function directionsUrl({ latitude, longitude }: GeoPoint) {
 	return `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
 }
 
 export function ReservationPage({ reservation }: { reservation: Reservation }) {
-	const { lot, quantity, pickup_code, collected_at } = reservation;
+	const { lot, quantity, pickup_at, pickup_code, collected_at } = reservation;
 	const isBooked = reservation.status === "booked";
 
 	return (
@@ -80,9 +78,7 @@ export function ReservationPage({ reservation }: { reservation: Reservation }) {
 						Passage prévu
 					</dt>
 					<dd className="mt-1">
-						<p className="text-lg font-semibold">
-							{formatDateTime(reservation.pickup_at)}
-						</p>
+						<p className="text-lg font-semibold">{formatDateTime(pickup_at)}</p>
 						<p className="text-sm text-cream/70">
 							Créneau du fournisseur&nbsp;:{" "}
 							{formatPickupWindow(lot.pickup_start, lot.pickup_end)}

@@ -1,12 +1,11 @@
 import { useState } from "react";
 
+import type { GeoPoint } from "@/features/auth/auth-api";
 import { formatDistance } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import type { SupplierSearchResult } from "./association-api";
 import { SupplierCard } from "./supplier-card";
-
-type GeoPoint = { latitude: number; longitude: number };
 
 const KM_PER_DEGREE_OF_LATITUDE = 110.574;
 // Share of the half-width taken by the search radius: the outer ring stays inside the frame.

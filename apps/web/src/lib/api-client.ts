@@ -25,7 +25,7 @@ type ApiErrorBody = z.infer<typeof apiErrorBodySchema>;
 export type ApiErrorCode = ApiErrorBody["code"];
 export type ApiErrorDetail = NonNullable<ApiErrorBody["details"]>[number];
 
-const FALLBACK_MESSAGE =
+export const FALLBACK_MESSAGE =
 	"Une erreur inattendue est survenue. Réessayez plus tard.";
 const NETWORK_MESSAGE =
 	"Impossible de joindre le serveur. Vérifiez votre connexion.";
@@ -59,7 +59,6 @@ export class NetworkError extends Error {
 	}
 }
 
-/** A page of a paginated list (`page` and `per_page` parameters in the contract). */
 export type Page<T> = {
 	data: T[];
 	meta: { page: number; per_page: number; total: number };
