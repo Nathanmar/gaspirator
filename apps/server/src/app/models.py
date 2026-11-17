@@ -14,6 +14,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Numeric,
+    SmallInteger,
     String,
     UniqueConstraint,
     func,
@@ -242,6 +243,11 @@ class Reservation(Base):
     pickup_code: Mapped[str] = mapped_column(String(6))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     collected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Wrong pickup codes in a row (US-05); at the limit, confirming is blocked for a while.
+    failed_confirmations: Mapped[int] = mapped_column(
+        SmallInteger, default=0, server_default=text("0")
+    )
+    confirmation_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     lot: Mapped[Lot] = relationship(lazy="joined")
     association: Mapped[Association] = relationship(lazy="joined")

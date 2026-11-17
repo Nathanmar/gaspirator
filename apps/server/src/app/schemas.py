@@ -378,6 +378,10 @@ class ReservationList(BaseModel):
     data: list[Reservation]
 
 
+class PickupConfirmation(StrictModel):
+    pickup_code: str = Field(pattern=r"^\d{6}$", description="Code de collecte (6 chiffres)")
+
+
 # ----- Pagination -----
 
 

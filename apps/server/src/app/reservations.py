@@ -1,8 +1,9 @@
-"""US-04: reservations of lots by the associations
+"""US-04, US-05: reservations of lots by the associations, and confirmation of their pickup
 (/lots/{lotId}/reservations, /me/reservations, /reservations/{reservationId})."""
 
+import math
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated
 
@@ -11,7 +12,7 @@ from sqlalchemy import func, select
 
 from app import models
 from app.auth import get_current_association
-from app.errors import conflict, forbidden, invalid_fields, not_found
+from app.errors import conflict, forbidden, invalid_fields, not_found, too_many_requests
 from app.lots import (
     CurrentSupplier,
     DbSession,
@@ -29,6 +30,7 @@ from app.schemas import (
     LotStatus,
     LotSummary,
     PageMeta,
+    PickupConfirmation,
     Reservation,
     ReservationCreate,
     ReservationList,
@@ -42,6 +44,10 @@ CurrentAssociation = Annotated[models.Association, Depends(get_current_associati
 
 # Path parameters of the contract are int64.
 ReservationId = Annotated[int, Path(alias="reservationId", ge=1, le=2**63 - 1)]
+
+# US-05: after this many wrong pickup codes in a row, confirming is blocked for a while.
+MAX_WRONG_PICKUP_CODES = 5
+CONFIRMATION_LOCK = timedelta(minutes=15)
 
 
 def _errors(*status_codes: int) -> dict[int | str, dict]:
@@ -265,4 +271,61 @@ def get_reservation(
         return to_schema(reservation, with_pickup_code=True)
     if reservation.lot.supplier_id != user.supplier_id:
         raise forbidden("Cette réservation porte sur le lot d'un autre fournisseur.")
+    return to_schema(reservation, with_pickup_code=False)
+
+
+@router.post(
+    "/reservations/{reservationId}/confirm",
+    response_model=Reservation,
+    operation_id="confirmReservation",
+    responses=_errors(400, 401, 403, 404, 409, 422, 429),
+)
+def confirm_reservation(
+    reservation_id: ReservationId,
+    payload: PickupConfirmation,
+    supplier: CurrentSupplier,
+    session: DbSession,
+) -> Reservation:
+    """Confirm the pickup of a reservation of a lot of the current supplier with its code.
+
+    The reservation row stays locked until the commit, so simultaneous attempts are counted
+    one after the other: no more than `MAX_WRONG_PICKUP_CODES` codes before the block.
+    """
+    reservation = session.scalar(
+        select(models.Reservation)
+        .where(models.Reservation.id == reservation_id)
+        .with_for_update(of=models.Reservation)
+        .execution_options(populate_existing=True)
+    )
+    if reservation is None:
+        raise not_found("Réservation introuvable.")
+    if reservation.lot.supplier_id != supplier.id:
+        raise forbidden("Cette réservation porte sur le lot d'un autre fournisseur.")
+    if reservation.status == ReservationStatus.COLLECTED:
+        raise conflict("Cette réservation a déjà été collectée.")
+
+    now = datetime.now(UTC)
+    locked_until = reservation.confirmation_locked_until
+    if locked_until is not None and locked_until > now:
+        raise too_many_requests(
+            "Trop de codes incorrects : la confirmation de cette réservation est bloquée.",
+            retry_after=math.ceil((locked_until - now).total_seconds()),
+        )
+
+    if not secrets.compare_digest(payload.pickup_code, reservation.pickup_code):
+        reservation.failed_confirmations += 1
+        if reservation.failed_confirmations >= MAX_WRONG_PICKUP_CODES:
+            reservation.failed_confirmations = 0
+            reservation.confirmation_locked_until = now + CONFIRMATION_LOCK
+        session.commit()
+        raise invalid_fields(
+            [ErrorDetail(field="pickup_code", message="code de collecte incorrect")]
+        )
+
+    reservation.status = ReservationStatus.COLLECTED
+    reservation.collected_at = now
+    reservation.failed_confirmations = 0
+    reservation.confirmation_locked_until = None
+    session.commit()
+    session.refresh(reservation)
     return to_schema(reservation, with_pickup_code=False)

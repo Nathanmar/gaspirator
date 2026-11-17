@@ -76,7 +76,7 @@ _NOT_FOUND_ON_VALIDATION = {
 
 # Operations with a body (422 for its fields) whose contract also has a 400: an invalid
 # path parameter is an incorrect parameter, whatever the body.
-_BAD_REQUEST_ON_PATH_VALIDATION = {"createReservation"}
+_BAD_REQUEST_ON_PATH_VALIDATION = {"createReservation", "confirmReservation"}
 
 
 class ApiError(Exception):
@@ -88,12 +88,14 @@ class ApiError(Exception):
         code: str,
         message: str,
         details: list[ErrorDetail] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.code = code
         self.message = message
         self.details = details
+        self.headers = headers
 
 
 def unauthorized(message: str) -> ApiError:
@@ -117,9 +119,14 @@ def invalid_fields(details: list[ErrorDetail]) -> ApiError:
     return ApiError(422, "validation_error", "Certains champs sont invalides.", details)
 
 
+def too_many_requests(message: str, retry_after: int) -> ApiError:
+    """429, with the number of seconds to wait in `Retry-After`."""
+    return ApiError(429, "too_many_requests", message, headers={"Retry-After": str(retry_after)})
+
+
 async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:
     body = Error(code=exc.code, message=exc.message, details=exc.details)
-    headers = _UNAUTHORIZED_HEADERS if exc.status_code == 401 else None
+    headers = _UNAUTHORIZED_HEADERS if exc.status_code == 401 else exc.headers
     return JSONResponse(
         status_code=exc.status_code, content=body.model_dump(exclude_none=True), headers=headers
     )
