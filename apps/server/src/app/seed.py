@@ -1,7 +1,8 @@
 """Development data: suppliers, associations, lots and reservations around Paris.
 
-Run with `python -m app.seed`. It does nothing unless `SEED_DEV_DATA` is true (set by
-docker-compose.yml only), and only once per database: it stops if the seed admin exists.
+Run with `python -m app.seed` (the API image does it at start-up). It does nothing unless
+`SEED_DEV_DATA` is true (set in the local apps/server/.env only), and only once per
+database: it stops if the seed admin exists.
 
 Every seeded account uses the password `DEV_PASSWORD`. Dates are relative to the moment
 of the seed, so lots that are available on the day become expired later on.
