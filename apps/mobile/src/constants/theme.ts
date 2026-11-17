@@ -1,26 +1,28 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://unistyl.es/), etc.
- */
-
 import "@/global.css";
 
 import { Platform } from "react-native";
 
+// Same palette as apps/web (index.css): light = the landing/auth "paper" tokens, dark = the base "ink" tokens.
 export const Colors = {
 	light: {
-		text: "#000000",
-		background: "#ffffff",
-		backgroundElement: "#F0F0F3",
-		backgroundSelected: "#E0E1E6",
-		textSecondary: "#60646C",
+		text: "#10150f",
+		background: "#f4f0e6",
+		backgroundElement: "#ebe5d6",
+		backgroundSelected: "#e0d9c8",
+		textSecondary: "#56574f",
+		lime: "#4c7a0c",
+		tomato: "#c8341a",
+		onAccent: "#f4f0e6",
 	},
 	dark: {
-		text: "#ffffff",
-		background: "#000000",
-		backgroundElement: "#212225",
-		backgroundSelected: "#2E3135",
-		textSecondary: "#B0B4BA",
+		text: "#efe9dc",
+		background: "#060807",
+		backgroundElement: "#121512",
+		backgroundSelected: "#1c201b",
+		textSecondary: "#a9a69c",
+		lime: "#c6f432",
+		tomato: "#ff4f2e",
+		onAccent: "#060807",
 	},
 } as const;
 
@@ -61,5 +63,4 @@ export const Spacing = {
 	six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
