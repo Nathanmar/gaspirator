@@ -28,7 +28,7 @@ jobs:
   version:
     name: Next version
     if: github.event_name == 'push'
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.bump.outputs.version }}
     steps:
@@ -87,7 +87,7 @@ jobs:
     name: GitHub Release
     needs: [version, image-web, image-server]
     if: needs.version.outputs.version != ''
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     env:
