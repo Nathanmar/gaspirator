@@ -4,8 +4,8 @@ name: Web CI
 on:
   workflow_call:
     inputs:
-      strict:
-        description: Release mode, CVE audit fails on high/critical findings
+      skipBiome:
+        description: Skip the Biome check on files changed since origin/develop (release PRs)
         type: boolean
         default: false
 
@@ -36,7 +36,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Biome
-        if: ${{ !inputs.strict }}
+        if: ${{ !inputs.skipBiome }}
         run: pnpm exec biome ci --changed --since=origin/develop --no-errors-on-unmatched
 
       - name: Type check
@@ -57,7 +57,6 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      # Report only on develop; on release (strict) high/critical findings fail.
+      # High/critical always fail. Ignore a CVE via auditConfig.ignoreGhsas in pnpm-workspace.yaml.
       - name: pnpm audit
-        continue-on-error: ${{ !inputs.strict }}
-        run: pnpm audit ${{ inputs.strict && '--audit-level high' || '' }}
+        run: pnpm audit --audit-level high
