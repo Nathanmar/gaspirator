@@ -28,6 +28,7 @@ export function CollectionsSection({
 				</h2>
 				<Link
 					to="/association/history"
+					viewTransition
 					className="text-sm font-semibold underline underline-offset-4"
 				>
 					Historique des collectes
@@ -72,6 +73,7 @@ function UpcomingCollection({ reservation }: { reservation: Reservation }) {
 							<Link
 								to="/association/reservations/$reservationId"
 								params={{ reservationId: reservation.id }}
+								viewTransition
 								className="outline-none after:absolute after:inset-0"
 							>
 								{lot.title}

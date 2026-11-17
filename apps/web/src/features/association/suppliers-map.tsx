@@ -10,10 +10,41 @@ import {
 import type { GeoPoint } from "@/features/auth/auth-api";
 import { formatAddress, formatDistance, pluralize } from "@/lib/format";
 import { SUPPLIER_TYPE_LABELS } from "@/lib/labels";
+import { cn } from "@/lib/utils";
 
 import type { SupplierSearchResult } from "./association-api";
 import { RADIUS_OPTIONS } from "./association-loader";
 import { labelClass, PhoneLink } from "./space-ui";
+
+const segmentClass = (isActive: boolean) =>
+	cn(
+		"inline-flex flex-1 items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors",
+		isActive
+			? "bg-lime text-ink"
+			: "text-cream/70 hover:bg-cream/10 hover:text-cream",
+	);
+
+function RadiusPicker({ radius }: { radius: number }) {
+	return (
+		<nav
+			aria-label="Rayon de recherche"
+			className="mt-3 flex gap-1 rounded-full bg-cream/5 p-1"
+		>
+			{RADIUS_OPTIONS.map((option) => (
+				<Link
+					key={option}
+					to="/association"
+					search={{ radius_km: option }}
+					resetScroll={false}
+					aria-current={option === radius ? "page" : undefined}
+					className={segmentClass(option === radius)}
+				>
+					{option} km
+				</Link>
+			))}
+		</nav>
+	);
+}
 
 const panelClass =
 	"pointer-events-auto rounded-[28px] border border-cream/10 bg-ink/85 backdrop-blur-md";
@@ -78,31 +109,22 @@ export function SuppliersMap({
 			className="rounded-none border-0"
 			creditClassName="bottom-1.5 left-1/2 -translate-x-1/2"
 		>
-			<div className="pointer-events-none absolute inset-x-4 top-4 flex flex-wrap items-start justify-between gap-3 lg:inset-x-8 lg:top-8">
-				<div className={`${panelClass} px-5 py-3`}>
+			{/* Top left: the top right is kept for the account buttons of SpaceLayout. */}
+			<div
+				className={`${panelClass} absolute top-4 left-4 p-4 lg:top-8 lg:left-8`}
+			>
+				<div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1 px-1">
 					<h2 id="suppliers-title" className="font-semibold">
 						Fournisseurs autour de vous
 					</h2>
-					<p className="text-xs text-cream/70">À moins de {radius} km</p>
+					<p className="text-cream/70">
+						<span className="font-semibold text-cream">{total}</span>{" "}
+						{total > 1 ? "fournisseurs" : "fournisseur"} ·{" "}
+						<span className="font-semibold text-lime">{lots}</span>{" "}
+						{lots > 1 ? "lots" : "lot"}
+					</p>
 				</div>
-				<dl className={`${panelClass} flex gap-5 px-5 py-3`}>
-					<div>
-						<dt className="sr-only">Fournisseurs</dt>
-						<dd>
-							<span className="font-semibold">{total}</span>{" "}
-							<span className="text-cream/70">
-								{total > 1 ? "fournisseurs" : "fournisseur"}
-							</span>
-						</dd>
-					</div>
-					<div>
-						<dt className="sr-only">Lots</dt>
-						<dd>
-							<span className="font-semibold text-lime">{lots}</span>{" "}
-							<span className="text-cream/70">{lots > 1 ? "lots" : "lot"}</span>
-						</dd>
-					</div>
-				</dl>
+				<RadiusPicker radius={radius} />
 			</div>
 
 			<div className="pointer-events-none absolute inset-x-4 bottom-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between lg:inset-x-8 lg:bottom-8">

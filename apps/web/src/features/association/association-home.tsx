@@ -1,7 +1,7 @@
 import type { AssociationHomeData } from "./association-loader";
 import { CollectionsSection } from "./collections-section";
 import { eyebrowClass, pageTitleClass } from "./space-ui";
-import { RadiusPicker, SuppliersSection } from "./suppliers-section";
+import { SuppliersSection } from "./suppliers-section";
 
 export function AssociationHome({
 	data,
@@ -23,8 +23,6 @@ export function AssociationHome({
 					{association.name} · {association.address.city}
 				</p>
 			</div>
-
-			<RadiusPicker radius={radius} />
 
 			<SuppliersSection
 				suppliers={suppliers}

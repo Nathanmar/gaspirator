@@ -25,14 +25,17 @@ describe("SpaceLayout", () => {
 		expect(await screen.findByText("Contenu")).toBeInTheDocument();
 	});
 
-	it("logs out and goes back to the home page", async () => {
+	it("logs out from the account menu and goes back to the home page", async () => {
 		mockFetch(new Response(null, { status: 204 }));
 		const router = renderWithRouter(<SpaceLayout>{null}</SpaceLayout>, {
 			path: "/association",
 		});
 
 		await userEvent.click(
-			await screen.findByRole("button", { name: "Se déconnecter" }),
+			await screen.findByRole("button", { name: "Mon compte" }),
+		);
+		await userEvent.click(
+			await screen.findByRole("menuitem", { name: "Se déconnecter" }),
 		);
 
 		await waitFor(() => expect(router.state.location.pathname).toBe("/"));

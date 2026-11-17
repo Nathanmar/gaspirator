@@ -1,9 +1,18 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { Bell, LogOut, Settings, User } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { LogoMark } from "@/components/landing/logo-mark";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useLogout } from "@/features/auth/use-logout";
+
+const iconButtonClass =
+	"grid size-9 place-items-center rounded-lg text-cream/70 transition-colors hover:bg-cream/10 hover:text-cream focus-visible:bg-cream/10 focus-visible:text-cream focus-visible:outline-none";
 
 export function SpaceLayout({ children }: { children: ReactNode }) {
 	const logOut = useLogout();
@@ -35,17 +44,52 @@ export function SpaceLayout({ children }: { children: ReactNode }) {
 					</span>
 				</Link>
 
-				<button
-					type="button"
-					onClick={() => void handleLogout()}
-					className="inline-flex size-11 shrink-0 items-center justify-center gap-2 rounded-full border border-cream/15 text-[11px] font-semibold tracking-[0.18em] whitespace-nowrap uppercase transition-colors hover:bg-cream/10 focus-visible:bg-cream/10 min-[380px]:w-auto min-[380px]:px-4"
+				{/* Over the top right corner of the map when the page fills the right half. */}
+				<nav
+					aria-label="Compte"
+					className="z-20 flex shrink-0 gap-1 rounded-xl border border-cream/10 bg-ink/85 p-1 backdrop-blur-md lg:group-has-[[data-fit-screen]]/space:fixed lg:group-has-[[data-fit-screen]]/space:top-8 lg:group-has-[[data-fit-screen]]/space:right-8"
 				>
-					<LogOut className="size-4" aria-hidden="true" />
-					{/* Icon only on the narrowest phones, where the label does not fit next to the logo. */}
-					<span className="sr-only min-[380px]:not-sr-only">
-						Se déconnecter
-					</span>
-				</button>
+					{/* shortcut: settings and notifications have no page yet, link them once they do. */}
+					<button
+						type="button"
+						aria-disabled="true"
+						title="Bientôt disponible"
+						className={`${iconButtonClass} cursor-not-allowed opacity-50`}
+					>
+						<Settings className="size-4" aria-hidden="true" />
+						<span className="sr-only">Paramètres (bientôt disponible)</span>
+					</button>
+					<button
+						type="button"
+						aria-disabled="true"
+						title="Bientôt disponible"
+						className={`${iconButtonClass} cursor-not-allowed opacity-50`}
+					>
+						<Bell className="size-4" aria-hidden="true" />
+						<span className="sr-only">Notifications (bientôt disponible)</span>
+					</button>
+					<DropdownMenu>
+						<DropdownMenuTrigger
+							aria-label="Mon compte"
+							className={`${iconButtonClass} data-popup-open:bg-cream/10 data-popup-open:text-cream`}
+						>
+							<User className="size-4" aria-hidden="true" />
+						</DropdownMenuTrigger>
+						<DropdownMenuContent
+							align="end"
+							sideOffset={8}
+							className="w-auto min-w-44 rounded-xl border border-cream/10 bg-ink p-1 font-display text-cream ring-0"
+						>
+							<DropdownMenuItem
+								onClick={() => void handleLogout()}
+								className="gap-2.5 rounded-lg px-3 py-2.5 text-sm text-cream focus:bg-cream/10 focus:text-cream"
+							>
+								<LogOut className="size-4" aria-hidden="true" />
+								Se déconnecter
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</nav>
 			</header>
 
 			<main className="flex w-full flex-1 flex-col px-5 pt-4 pb-16 md:px-10 md:pt-8 lg:has-[[data-fit-screen]]:min-h-0 lg:has-[[data-fit-screen]]:w-1/2 lg:has-[[data-fit-screen]]:pb-8 xl:has-[[data-fit-screen]]:px-16">

@@ -46,6 +46,7 @@ export function BackLink({
 	return (
 		<Link
 			to={to}
+			viewTransition
 			className="-ml-1 inline-flex h-11 items-center gap-2 px-1 text-sm font-semibold text-cream/70 transition-colors hover:text-cream"
 		>
 			<ArrowLeft className="size-4" aria-hidden="true" />
