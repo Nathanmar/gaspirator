@@ -8,6 +8,7 @@ import { getMe } from "@/features/auth/me";
 import type { Page } from "@/lib/api-client";
 
 import {
+	getReservation,
 	listMyReservations,
 	type Reservation,
 	type SupplierSearchResult,
@@ -21,35 +22,53 @@ export const associationSearchSchema = z.object({
 	radius_km: z.literal(RADIUS_OPTIONS).optional().catch(undefined),
 });
 
-export type AssociationHomeData = {
+export type AssociationAccount = {
 	firstname: string;
 	association: Association;
+};
+
+export type AssociationHomeData = AssociationAccount & {
 	reservations: Reservation[];
 	suppliers: Page<SupplierSearchResult>;
 };
 
-export async function loadAssociationHome(
-	radius: number,
-): Promise<AssociationHomeData> {
+async function withSession<T>(load: () => Promise<T>): Promise<T> {
 	try {
-		const me = await getMe();
-		if (!me.association) throw redirect({ to: "/" });
-
-		const [reservations, suppliers] = await Promise.all([
-			listMyReservations(),
-			searchSuppliers({ radius_km: radius }),
-		]);
-		return {
-			firstname: me.firstname,
-			association: me.association,
-			reservations: reservations.data,
-			suppliers,
-		};
+		return await load();
 	} catch (error) {
 		if (error instanceof SessionExpiredError) {
-			toast.info(error.message);
+			// The id keeps a single message when several loaders find the session expired at once.
+			toast.info(error.message, { id: "session-expired" });
 			throw redirect({ to: "/login", search: { role: "association" } });
 		}
 		throw error;
 	}
+}
+
+export function loadAssociationAccount(): Promise<AssociationAccount> {
+	return withSession(async () => {
+		const me = await getMe();
+		if (!me.association) throw redirect({ to: "/" });
+		return { firstname: me.firstname, association: me.association };
+	});
+}
+
+export function loadAssociationHome(radius: number) {
+	return withSession(async () => {
+		const [reservations, suppliers] = await Promise.all([
+			listMyReservations(),
+			searchSuppliers({ radius_km: radius }),
+		]);
+		return { reservations: reservations.data, suppliers };
+	});
+}
+
+export function loadReservationHistory(): Promise<Reservation[]> {
+	return withSession(
+		async () => (await listMyReservations({ per_page: 100 })).data,
+	);
+}
+
+export function loadReservation(id: number): Promise<Reservation> {
+	return withSession(() => getReservation(id));
 }

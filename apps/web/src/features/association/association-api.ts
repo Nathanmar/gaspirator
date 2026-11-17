@@ -50,6 +50,18 @@ export function searchSuppliers({
 }
 
 /** `GET /me/reservations`: most recently booked first, with their pickup codes. */
-export function listMyReservations(): Promise<Page<Reservation>> {
-	return authorizedRequest("/me/reservations", { method: "GET" });
+export function listMyReservations({
+	per_page,
+}: {
+	per_page?: number;
+} = {}): Promise<Page<Reservation>> {
+	const query = per_page
+		? `?${new URLSearchParams({ per_page: String(per_page) })}`
+		: "";
+	return authorizedRequest(`/me/reservations${query}`, { method: "GET" });
+}
+
+/** `GET /reservations/{id}`: the association that booked it also gets the pickup code. */
+export function getReservation(id: number): Promise<Reservation> {
+	return authorizedRequest(`/reservations/${id}`, { method: "GET" });
 }

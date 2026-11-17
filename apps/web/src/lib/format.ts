@@ -43,6 +43,28 @@ export function formatDateTime(iso: string): string {
 	return `${day.format(date)} à ${time.format(date)}`;
 }
 
+export function formatPickupWindow(startIso: string, endIso: string): string {
+	const start = new Date(startIso);
+	const end = new Date(endIso);
+	if (start.getTime() === end.getTime()) return formatDateTime(startIso);
+	if (day.format(start) === day.format(end)) {
+		return `${day.format(start)}, entre ${time.format(start)} et ${time.format(end)}`;
+	}
+	return `du ${formatDateTime(startIso)} au ${formatDateTime(endIso)}`;
+}
+
+// A calendar date (use-by date) has no time: read in UTC, it never moves to the day before.
+const calendarDay = new Intl.DateTimeFormat("fr-FR", {
+	weekday: "short",
+	day: "numeric",
+	month: "short",
+	timeZone: "UTC",
+});
+
+export function formatDate(isoDate: string): string {
+	return calendarDay.format(new Date(`${isoDate}T00:00:00Z`));
+}
+
 export function formatPickupCode(code: string): string {
 	return `${code.slice(0, 3)}${NBSP}${code.slice(3)}`;
 }
