@@ -38,14 +38,14 @@ Useful commands:
 | `pnpm db:push` | Push the database schema |
 | `pnpm db:studio` | Open the database UI |
 
-Run the tests and the linter (ESLint / Prettier) before pushing.
+Run the tests before pushing. Biome (lint + format) runs automatically on staged files of `apps/web` and `apps/mobile` at each commit (husky pre-commit hook); run it on everything with `pnpm lint`.
 
 ## Workflow
 
 1. Pick or create an issue.
-2. Create a branch from `main` following the [branch naming](#branch-naming) rules.
+2. Create a branch from `develop` following the [branch naming](#branch-naming) rules.
 3. Commit following the [commit convention](#committing-changes).
-4. Open a pull request targeting `main`.
+4. Open a pull request targeting `develop`. Releases are a pull request from `develop` to `main`.
 5. Get one approval and a green CI, then merge.
 
 ## Branch naming
@@ -76,9 +76,19 @@ Examples:
 
 Keep the description short, in the imperative mood, and without a trailing period.
 
+A husky `commit-msg` hook (commitlint) rejects messages that do not follow this format.
+
+The version is computed from these commits when `develop` is merged into `main` ([git-cliff](https://git-cliff.org), `cliff.toml`):
+
+- `fix:` (and any other type) bumps the patch: `1.4.2` → `1.4.3`
+- `feat:` bumps the minor: `1.4.2` → `1.5.0`
+- `feat!:` or a `BREAKING CHANGE:` footer bumps the major: `1.4.2` → `2.0.0`
+
+The release creates the `vX.Y.Z` tag, a GitHub Release with the changelog, and the Docker images `X.Y.Z`, `X.Y`, `sha-<commit>` and `latest` on GHCR. Preview the changelog locally with `pnpm changelog`.
+
 ## Pull request guidelines
 
-- Target the `main` branch.
+- Target the `develop` branch.
 - Link the related issue (e.g. `Closes #12`).
 - Describe what changed and why; add screenshots for UI changes.
 - Make sure all tests and CI checks are green before merging.
