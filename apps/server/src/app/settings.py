@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     access_token_ttl_seconds: int = 15 * 60
     refresh_token_ttl_seconds: int = 30 * 24 * 60 * 60
 
+    # E-mails (Mailpit in development: SMTP_HOST=localhost, or mailpit in docker compose).
+    # Without SMTP_HOST, e-mails are only written to the logs.
+    smtp_host: str | None = None
+    smtp_port: int = 1025
+    mail_from: str = "Gaspirator <noreply@gaspirator.fr>"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.auth import create_access_token, hash_password
 from app.db import Base, get_session
+from app.mail import Email, get_mailer
 from app.main import app
 from app.models import Association, RegistrationRequest, Supplier, User
 from app.schemas import OrganizationType, RegistrationStatus, SupplierType, UserRole
@@ -117,6 +118,22 @@ def db(session_factory: sessionmaker[Session]) -> Iterator[Session]:
     """A session to arrange and inspect the database from a test."""
     with session_factory() as session:
         yield session
+
+
+class Outbox(list[Email]):
+    """Mailer of the tests: keeps the e-mails instead of sending them."""
+
+    def send(self, email: Email) -> None:
+        self.append(email)
+
+
+@pytest.fixture(autouse=True)
+def outbox() -> Iterator[Outbox]:
+    """E-mails sent by the API during the test; nothing goes through SMTP (Mailpit)."""
+    mailer = Outbox()
+    app.dependency_overrides[get_mailer] = lambda: mailer
+    yield mailer
+    app.dependency_overrides.pop(get_mailer, None)
 
 
 @pytest.fixture
