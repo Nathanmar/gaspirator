@@ -3,11 +3,6 @@ name: Server CI
 # Template called by ci.yml when apps/server or openapi.yaml change.
 on:
   workflow_call:
-    inputs:
-      strict:
-        description: Release mode, CVE audit fails on any finding
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -65,7 +60,8 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: Export locked runtime dependencies
         run: uv export --frozen --no-dev --no-hashes --no-emit-project -o requirements.txt
-      # Report only on develop; on release (strict) any finding fails (pip-audit has no severity filter).
+      # High/critical fail; lower severities are only reported. Ignore a CVE with --ignore-vuln <ID>.
       - name: pip-audit
-        continue-on-error: ${{ !inputs.strict }}
-        run: uvx pip-audit -r requirements.txt --no-deps --disable-pip
+        run: uvx pip-audit -r requirements.txt --no-deps --disable-pip -f json -o pip-audit.json || true
+      - name: Severity gate
+        run: python3 "$GITHUB_WORKSPACE/.github/scripts/pip_audit_gate.py" pip-audit.json HIGH
