@@ -258,6 +258,9 @@ def create_user(db: Session) -> Callable[..., User]:
                 postal_code="69002",
                 city="Lyon",
                 contact_phone="04 78 00 00 00",
+                # Geocoded position of the address (see `RegistrationRequest.latitude`).
+                latitude=45.7578,
+                longitude=4.832,
             )
         db.add(user)
         db.commit()

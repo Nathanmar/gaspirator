@@ -148,6 +148,11 @@ class RegistrationRequest(Base):
     postal_code: Mapped[str] = mapped_column(String(5))
     city: Mapped[str] = mapped_column(String(120))
     contact_phone: Mapped[str] = mapped_column(String(20))
+    # Position of the address, geocoded on submission (contract: "L'adresse est géocodée à
+    # l'envoi"); copied to the supplier or association `location` on approval. Nullable
+    # until the geocoding of POST /registration-requests fills it.
+    latitude: Mapped[float | None] = mapped_column(Double)
+    longitude: Mapped[float | None] = mapped_column(Double)
 
     # Supplier or association created when an admin approves the request.
     supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"))
