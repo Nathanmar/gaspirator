@@ -294,6 +294,10 @@ class SupplierSearchPage(BaseModel):
     meta: PageMeta
 
 
+class SupplierProfile(SupplierSummary):
+    available_lots_count: int
+
+
 # ----- Erreurs -----
 
 

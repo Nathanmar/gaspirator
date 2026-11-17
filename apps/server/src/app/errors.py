@@ -68,7 +68,10 @@ _BAD_REQUEST_ON_VALIDATION = {"refreshToken", "logout", "listMyLots", "searchSup
 
 # Operations whose contract has neither 400 nor 422: an id that cannot exist (not an
 # integer, out of range) is simply not found.
-_NOT_FOUND_ON_VALIDATION = {"getLot": "Lot introuvable."}
+_NOT_FOUND_ON_VALIDATION = {
+    "getLot": "Lot introuvable.",
+    "getSupplier": "Fournisseur introuvable.",
+}
 
 
 class ApiError(Exception):

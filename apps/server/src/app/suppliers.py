@@ -3,21 +3,31 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.orm import Session
 
 from app import models
-from app.auth import get_current_association
+from app.auth import get_current_association, get_current_user
 from app.db import get_session
-from app.errors import ApiError
+from app.errors import ApiError, not_found
 from app.lots import supplier_summary
-from app.schemas import Error, PageMeta, SupplierSearchPage, SupplierSearchResult
+from app.schemas import (
+    Error,
+    PageMeta,
+    SupplierProfile,
+    SupplierSearchPage,
+    SupplierSearchResult,
+)
 
 router = APIRouter(tags=["Suppliers"])
 
 DbSession = Annotated[Session, Depends(get_session)]
 CurrentAssociation = Annotated[models.Association, Depends(get_current_association)]
+CurrentUser = Annotated[models.User, Depends(get_current_user)]
+
+# Path parameters of the contract are int64.
+SupplierId = Annotated[int, Path(alias="supplierId", ge=1, le=2**63 - 1)]
 
 EARTH_RADIUS_KM = 6371.0
 
@@ -117,3 +127,27 @@ def search_suppliers(
         ],
         meta=PageMeta(page=page, per_page=per_page, total=total),
     )
+
+
+def _get_supplier(session: Session, supplier_id: int) -> models.Supplier:
+    supplier = session.get(models.Supplier, supplier_id)
+    if supplier is None:
+        raise not_found("Fournisseur introuvable.")
+    return supplier
+
+
+@router.get(
+    "/suppliers/{supplierId}",
+    response_model=SupplierProfile,
+    operation_id="getSupplier",
+    responses=_errors(401, 404),
+)
+def get_supplier(supplier_id: SupplierId, _: CurrentUser, session: DbSession) -> SupplierProfile:
+    """The page of a supplier, with its number of available lots (0 or more)."""
+    supplier = _get_supplier(session, supplier_id)
+    count = session.scalar(
+        select(func.count())
+        .select_from(models.Lot)
+        .where(models.Lot.supplier_id == supplier.id, is_available(datetime.now(UTC)))
+    )
+    return SupplierProfile(**supplier_summary(supplier).model_dump(), available_lots_count=count)
