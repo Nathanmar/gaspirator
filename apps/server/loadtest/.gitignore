@@ -1,0 +1,3 @@
+# Heavy locust outputs: the figures are in /Charge.md
+results/**/*.html
+results/**/*_stats_history.csv

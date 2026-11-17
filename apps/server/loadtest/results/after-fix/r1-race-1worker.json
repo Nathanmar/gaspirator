@@ -1,0 +1,205 @@
+{
+  "users": 50,
+  "lots": [
+    {
+      "lot_id": 1,
+      "title": "Course indivisible 0",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.248,
+      "ok": true
+    },
+    {
+      "lot_id": 2,
+      "title": "Course divisible 0",
+      "statuses": {
+        "201": 1,
+        "409": 49
+      },
+      "burst_seconds": 0.239,
+      "ok": true
+    },
+    {
+      "lot_id": 3,
+      "title": "Course indivisible 1",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.233,
+      "ok": true
+    },
+    {
+      "lot_id": 4,
+      "title": "Course divisible 1",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.262,
+      "ok": true
+    },
+    {
+      "lot_id": 5,
+      "title": "Course indivisible 2",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.252,
+      "ok": true
+    },
+    {
+      "lot_id": 6,
+      "title": "Course divisible 2",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.243,
+      "ok": true
+    },
+    {
+      "lot_id": 7,
+      "title": "Course indivisible 3",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.249,
+      "ok": true
+    },
+    {
+      "lot_id": 8,
+      "title": "Course divisible 3",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.231,
+      "ok": true
+    },
+    {
+      "lot_id": 9,
+      "title": "Course indivisible 4",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.237,
+      "ok": true
+    },
+    {
+      "lot_id": 10,
+      "title": "Course divisible 4",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.246,
+      "ok": true
+    },
+    {
+      "lot_id": 11,
+      "title": "Course indivisible 5",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.24,
+      "ok": true
+    },
+    {
+      "lot_id": 12,
+      "title": "Course divisible 5",
+      "statuses": {
+        "201": 1,
+        "409": 49
+      },
+      "burst_seconds": 0.247,
+      "ok": true
+    },
+    {
+      "lot_id": 13,
+      "title": "Course indivisible 6",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.251,
+      "ok": true
+    },
+    {
+      "lot_id": 14,
+      "title": "Course divisible 6",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.247,
+      "ok": true
+    },
+    {
+      "lot_id": 15,
+      "title": "Course indivisible 7",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.276,
+      "ok": true
+    },
+    {
+      "lot_id": 16,
+      "title": "Course divisible 7",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.243,
+      "ok": true
+    },
+    {
+      "lot_id": 17,
+      "title": "Course indivisible 8",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.238,
+      "ok": true
+    },
+    {
+      "lot_id": 18,
+      "title": "Course divisible 8",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.233,
+      "ok": true
+    },
+    {
+      "lot_id": 19,
+      "title": "Course indivisible 9",
+      "statuses": {
+        "201": 1,
+        "409": 49
+      },
+      "burst_seconds": 0.242,
+      "ok": true
+    },
+    {
+      "lot_id": 20,
+      "title": "Course divisible 9",
+      "statuses": {
+        "409": 49,
+        "201": 1
+      },
+      "burst_seconds": 0.232,
+      "ok": true
+    }
+  ]
+}

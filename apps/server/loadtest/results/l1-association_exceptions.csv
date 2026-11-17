@@ -1,0 +1,9 @@
+Count,Message,Traceback,Nodes
+80,Expecting value: line 1 column 1 (char 0),"  File ""C:\Users\Alexis\AppData\Local\uv\cache\archive-v0\UqXj8Q_e0BRRRdRD\Lib\site-packages\locust\user\users.py"", line 166, in run
+    self.on_start()
+  File ""C:\Users\Alexis\dev\gaspirator\apps\server\loadtest\locustfile.py"", line 32, in on_start
+    token = response.json()[""access_token""]
+            ^^^^^^^^^^^^^^^
+  File ""C:\Users\Alexis\AppData\Local\uv\cache\archive-v0\UqXj8Q_e0BRRRdRD\Lib\site-packages\requests\models.py"", line 1120, in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+",local
