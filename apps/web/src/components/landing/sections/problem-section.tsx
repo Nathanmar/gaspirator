@@ -27,7 +27,7 @@ export function ProblemSection() {
 							de la nourriture produite dans le monde est perdue ou gaspillée.
 						</p>
 						<p className="mt-2 font-mono text-xs tracking-[0.15em] text-cream/55 uppercase">
-							Source — FAO, 2011
+							Source - FAO, 2011
 						</p>
 					</div>
 
@@ -42,7 +42,7 @@ export function ProblemSection() {
 							de nourriture perdue ou gaspillée chaque année, rien qu'en France.
 						</p>
 						<p className="mt-2 font-mono text-xs tracking-[0.15em] text-cream/55 uppercase">
-							Source — ADEME, 2016
+							Source - ADEME, 2016
 						</p>
 					</div>
 				</div>
