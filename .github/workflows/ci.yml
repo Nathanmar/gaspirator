@@ -14,7 +14,7 @@ jobs:
   # A skipped job counts as passed, so required checks never block a PR.
   changes:
     name: Detect changes
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: read # paths-filter lists PR files through the API
@@ -116,7 +116,7 @@ jobs:
   dependency-review:
     name: Dependency review
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       # Report only for now, like the other CVE checks.

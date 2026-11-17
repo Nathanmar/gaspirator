@@ -1,8 +1,5 @@
 name: Image CI
 
-# Template called by ci.yml and release.yml: builds one Docker image, scans it
-# with Trivy and, when `push` is set, publishes it to GHCR once the scan passed.
-# No `permissions` block: the job inherits the caller's (packages: write to push).
 on:
   workflow_call:
     inputs:
@@ -18,10 +15,6 @@ on:
         description: Path to the Dockerfile
         required: true
         type: string
-      strict:
-        description: Release mode, Trivy fails on fixable high/critical CVEs
-        type: boolean
-        default: false
       push:
         description: Publish the image to ghcr.io after a passing scan
         type: boolean
@@ -34,7 +27,7 @@ on:
 jobs:
   image:
     name: Build & scan image (${{ inputs.name }})
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     env:
       IMAGE_TAR: /tmp/gaspirator-${{ inputs.name }}.tar
       REPORT: /tmp/trivy-${{ inputs.name }}.txt
@@ -59,10 +52,10 @@ jobs:
           input: ${{ env.IMAGE_TAR }}
           format: table
           output: ${{ env.REPORT }}
-          # Strict: block only on CVEs that have a fix, unfixed base-image ones would block forever.
-          severity: ${{ inputs.strict && 'HIGH,CRITICAL' || 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL' }}
-          ignore-unfixed: ${{ inputs.strict }}
-          exit-code: ${{ inputs.strict && '1' || '0' }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          # Only block on CVEs that have a fix; apk/apt upgrade in the Dockerfiles pulls those in.
+          ignore-unfixed: true
 
       - name: Add report to job summary
         if: always()

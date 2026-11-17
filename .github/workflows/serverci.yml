@@ -10,7 +10,7 @@ permissions:
 jobs:
   server:
     name: Server lint & tests (Python)
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: apps/server
@@ -51,7 +51,7 @@ jobs:
 
   audit-python:
     name: CVE audit (server / Python)
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: apps/server
