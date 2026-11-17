@@ -5,5 +5,5 @@ import { z } from "zod";
  * (`OrganizationType` of the contract). An unknown value is dropped instead of breaking the page.
  */
 export const authSearchSchema = z.object({
-  role: z.enum(["supplier", "association"]).optional().catch(undefined),
+	role: z.enum(["supplier", "association"]).optional().catch(undefined),
 });

@@ -104,7 +104,8 @@ def get_current_supplier(user: Annotated[User, Depends(get_current_user)]) -> Su
 def get_current_association(user: Annotated[User, Depends(get_current_user)]) -> Association:
     """FastAPI dependency: the association run by the current user, or 403.
 
-    As a dependency, the role is checked before the request body is validated.
+    As a dependency, the role is checked before the request body and the query
+    parameters are validated.
     """
     if user.association is None:
         raise forbidden("Action réservée aux associations.")

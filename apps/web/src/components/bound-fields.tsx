@@ -1,6 +1,5 @@
-import type { ComponentProps } from "react";
-
 import type { AnyFieldApi } from "@tanstack/react-form";
+import type { ComponentProps } from "react";
 
 import { TextField } from "./form-controls";
 
@@ -9,7 +8,7 @@ import { TextField } from "./form-controls";
 
 /** First validation error of a field, as shown under its control. */
 export function firstError(field: AnyFieldApi): string | undefined {
-  return field.state.meta.errors[0]?.message;
+	return field.state.meta.errors[0]?.message;
 }
 
 /**
@@ -17,24 +16,24 @@ export function firstError(field: AnyFieldApi): string | undefined {
  * when given (`account` + `email` -> `account-email`), with dots turned into dashes.
  */
 export function BoundTextField({
-  field,
-  idPrefix,
-  ...props
+	field,
+	idPrefix,
+	...props
 }: { field: AnyFieldApi; idPrefix?: string; label: string } & Omit<
-  ComponentProps<typeof TextField>,
-  "id" | "name" | "value" | "onChange" | "onBlur" | "error"
+	ComponentProps<typeof TextField>,
+	"id" | "name" | "value" | "onChange" | "onBlur" | "error"
 >) {
-  const id = field.name.replaceAll(".", "-");
+	const id = field.name.replaceAll(".", "-");
 
-  return (
-    <TextField
-      id={idPrefix ? `${idPrefix}-${id}` : id}
-      name={field.name}
-      value={field.state.value}
-      onBlur={field.handleBlur}
-      onChange={(e) => field.handleChange(e.target.value)}
-      error={firstError(field)}
-      {...props}
-    />
-  );
+	return (
+		<TextField
+			id={idPrefix ? `${idPrefix}-${id}` : id}
+			name={field.name}
+			value={field.state.value}
+			onBlur={field.handleBlur}
+			onChange={(e) => field.handleChange(e.target.value)}
+			error={firstError(field)}
+			{...props}
+		/>
+	);
 }
