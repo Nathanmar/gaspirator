@@ -20,6 +20,7 @@ from sqlalchemy import Engine, create_engine, make_url, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.auth import create_access_token, hash_password
+from app.company_registry import RegistryUnavailable, get_company_registry
 from app.db import Base, get_session
 from app.geocoding import GeocodingUnavailable, get_geocoder
 from app.main import app
@@ -152,16 +153,57 @@ def geocoder() -> FakeGeocoder:
     return FakeGeocoder()
 
 
+class FakeRegistry:
+    """Stands in for the API Recherche d'entreprises: no request leaves the tests.
+
+    Every SIRET and RNA number has the address `address`; set `address = None` for "no
+    address found", or `unavailable = True` for a service that cannot be reached.
+    """
+
+    def __init__(self) -> None:
+        self.address: Address | None = Address(
+            street="40 RUE DES CHANTIERS", postal_code="76600", city="LE HAVRE"
+        )
+        self.unavailable = False
+        self.lookups: list[tuple[str, str]] = []  # ("supplier" | "association", legal id)
+
+    def _lookup(self, kind: str, legal_id: str) -> Address | None:
+        self.lookups.append((kind, legal_id))
+        if self.unavailable:
+            raise RegistryUnavailable("service unreachable")
+        return self.address
+
+    def supplier_address(self, siret: str) -> Address | None:
+        return self._lookup("supplier", siret)
+
+    def association_address(self, rna: str) -> Address | None:
+        return self._lookup("association", rna)
+
+
 @pytest.fixture
-def client(session_factory: sessionmaker[Session], geocoder: FakeGeocoder) -> Iterator[TestClient]:
-    """Test client whose requests use the test database and the fake geocoder."""
+def registry() -> FakeRegistry:
+    """The company registry used by the app in this test (see `FakeRegistry`)."""
+    return FakeRegistry()
+
+
+def _use_fakes(geocoder: FakeGeocoder, registry: FakeRegistry) -> None:
+    """The app calls the fakes instead of the external APIs."""
+    app.dependency_overrides[get_geocoder] = lambda: geocoder
+    app.dependency_overrides[get_company_registry] = lambda: registry
+
+
+@pytest.fixture
+def client(
+    session_factory: sessionmaker[Session], geocoder: FakeGeocoder, registry: FakeRegistry
+) -> Iterator[TestClient]:
+    """Test client whose requests use the test database and the fake external APIs."""
 
     def _get_session() -> Iterator[Session]:
         with session_factory() as session:
             yield session
 
     app.dependency_overrides[get_session] = _get_session
-    app.dependency_overrides[get_geocoder] = lambda: geocoder
+    _use_fakes(geocoder, registry)
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
@@ -176,11 +218,14 @@ def prism_url(engine: Engine) -> Iterator[str]:
 
 @pytest.fixture
 def api(
-    prism_url: str, session_factory: sessionmaker[Session], geocoder: FakeGeocoder
+    prism_url: str,
+    session_factory: sessionmaker[Session],
+    geocoder: FakeGeocoder,
+    registry: FakeRegistry,
 ) -> Iterator[httpx2.Client]:
     """HTTP client going through Prism (paths without `/api/v1`, as in openapi.yaml).
 
-    The app uses the test database and the fake geocoder. Check each response with
+    The app uses the test database and the fake external APIs. Check each response with
     `tests.prism.assert_contract`.
     """
 
@@ -189,7 +234,7 @@ def api(
             yield session
 
     app.dependency_overrides[get_session] = _get_session
-    app.dependency_overrides[get_geocoder] = lambda: geocoder
+    _use_fakes(geocoder, registry)
     with httpx2.Client(base_url=prism_url, timeout=30) as http_client:
         yield http_client
     app.dependency_overrides.clear()
