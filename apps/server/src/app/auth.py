@@ -6,9 +6,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import bcrypt
+import jwt
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.db import get_session
@@ -56,7 +56,7 @@ def decode_access_token(token: str) -> dict[str, object] | None:
     """Claims of a valid, unexpired access token; None otherwise."""
     try:
         claims = jwt.decode(token, get_settings().secret_key, algorithms=[ALGORITHM])
-    except JWTError:
+    except jwt.PyJWTError:
         return None
     if claims.get("type") != ACCESS_TOKEN_TYPE:
         return None
