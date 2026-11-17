@@ -1,28 +1,34 @@
 # Gaspirator
 
-A platform that connects food **suppliers** (canteens, hospitals, supermarkets…) with **charities**, so surplus food is donated instead of thrown away.
-
-- **Web front end**: suppliers and admin back office
-- **Mobile app**: charities (not scaffolded yet)
-- **Back end** + **database**
+A Too Good To Go for donations: food **suppliers** (canteens, hospitals, supermarkets…) publish their surplus as lots, and **charities** book them and come to collect them.
 
 Links: [GitHub Project](https://github.com/users/Nathanmar/projects/3) · [Notion](https://app.notion.com/p/Projet-409243b4cee0809bb06ee2814d7a2789)
 
 ## Stack
 
-| Part                 | Tech                                                                  | Path          |
-| -------------------- | --------------------------------------------------------------------- | ------------- |
-| Web front end        | TanStack Router + Vite, Tailwind, daisyUI, Zustand, TanStack Form, GSAP | `apps/web`    |
-| Back end             | Python FastAPI, Pydantic, JWT auth, Ruff, pytest, uv                  | `apps/server` |
-| Database             | PostgreSQL                                                            | —             |
-| Shared env / config  | TypeScript packages                                                   | `packages/*`  |
-| Tooling              | pnpm workspaces, Turborepo, Docker Compose, Dev Container, GitHub Actions | `.`           |
+| Part                | Tech                                                                      | Path          |
+| ------------------- | ------------------------------------------------------------------------- | ------------- |
+| Web front end       | TanStack Router + Vite, Tailwind, daisyUI, Zustand, TanStack Form, GSAP   | `apps/web`    |
+| Mobile app          | Expo (React Native), Expo Router                                          | `apps/mobile` |
+| Back end            | Python FastAPI, Pydantic, JWT auth, Ruff, pytest, uv                      | `apps/server` |
+| Database            | PostgreSQL 18                                                             | —             |
+| Shared env / config | TypeScript packages                                                       | `packages/*`  |
+| Tooling             | pnpm workspaces, Turborepo, Docker Compose, Dev Container, GitHub Actions | `.`           |
 
 The project was generated with Better Fullstack; `bts.jsonc` describes the stack.
 
-## Setup
+## Prerequisites
 
-Requirements: Node.js, [pnpm](https://pnpm.io), Python 3.11+ and [uv](https://docs.astral.sh/uv/).
+| Tool                                                      | Version                       | Notes                                                                 |
+| --------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------- |
+| Node.js                                                   | 24 (LTS)                      | Version of the CI and of the web image                                |
+| [pnpm](https://pnpm.io)                                   | 10.19.0                       | Pinned in `package.json` (`packageManager`)                           |
+| Python                                                    | 3.12 (3.11 minimum)           | Version of the API image, minimum set in `apps/server/pyproject.toml` |
+| [uv](https://docs.astral.sh/uv/)                          | 0.9.17 or later               | Version of the API image                                              |
+| [Docker](https://docs.docker.com/get-started/get-docker/) | Compose v2 (`docker compose`) | PostgreSQL, Prism and Mailpit, or the whole stack                     |
+| [Expo Go](https://expo.dev/go)                            | SDK 58                        | Optional: runs the mobile app on a phone                              |
+
+## Setup
 
 ```sh
 pnpm install
@@ -127,6 +133,18 @@ docker compose up -d mailpit
 | Credentials | none (no authentication, no TLS)                          |
 
 Nothing is stored: the inbox is emptied when the container is recreated.
+
+## Versioning
+
+Releases follow [Semantic Versioning](https://semver.org). When `develop` is merged into `main`, [git-cliff](https://git-cliff.org) (`cliff.toml`) computes the next version from the [Conventional Commits](https://www.conventionalcommits.org) since the last release:
+
+| Commits since the last release          | Bump  | Example           |
+| --------------------------------------- | ----- | ----------------- |
+| `feat!:` or a `BREAKING CHANGE:` footer | major | `1.4.2` → `2.0.0` |
+| `feat:`                                 | minor | `1.4.2` → `1.5.0` |
+| `fix:` and the other types              | patch | `1.4.2` → `1.4.3` |
+
+The first release is `v0.1.0`. Each release creates the `vX.Y.Z` tag, a GitHub Release with the changelog, and the Docker images `X.Y.Z`, `X.Y`, `sha-<commit>` and `latest` on GHCR. Preview the changelog with `pnpm changelog`; the commit rules are in [CONTRIBUTING.md](CONTRIBUTING.md#committing-changes).
 
 ## Backlog (MoSCoW)
 
