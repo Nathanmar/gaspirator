@@ -212,6 +212,10 @@ class Lot(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     supplier: Mapped[Supplier] = relationship(lazy="joined")
+    # Only loaded for the status of a fully reserved lot (`reserved` or `collected`).
+    reservations: Mapped[list["Reservation"]] = relationship(
+        back_populates="lot", passive_deletes=True
+    )
 
 
 class Reservation(Base):
@@ -249,5 +253,5 @@ class Reservation(Base):
     )
     confirmation_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    lot: Mapped[Lot] = relationship(lazy="joined")
+    lot: Mapped[Lot] = relationship(lazy="joined", back_populates="reservations")
     association: Mapped[Association] = relationship(lazy="joined")
