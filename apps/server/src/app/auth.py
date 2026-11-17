@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.db import get_session
 from app.errors import forbidden, unauthorized
 from app.models import Association, Supplier, User
+from app.schemas import UserRole
 from app.settings import get_settings
 
 ALGORITHM = "HS256"
@@ -110,3 +111,13 @@ def get_current_association(user: Annotated[User, Depends(get_current_user)]) ->
     if user.association is None:
         raise forbidden("Action réservée aux associations.")
     return user.association
+
+
+def get_current_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
+    """FastAPI dependency: the current user if they are a platform admin, or 403.
+
+    As a dependency, the role is checked before the path and query parameters are validated.
+    """
+    if user.role != UserRole.ADMIN:
+        raise forbidden("Action réservée aux admins de la plateforme.")
+    return user

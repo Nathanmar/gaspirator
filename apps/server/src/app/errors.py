@@ -68,6 +68,7 @@ _BAD_REQUEST_ON_VALIDATION = {
     "refreshToken",
     "logout",
     "listMyLots",
+    "listRegistrationRequests",
     "listMyReservations",
     "searchSuppliers",
 }
@@ -78,6 +79,8 @@ _NOT_FOUND_ON_VALIDATION = {
     "getLot": "Lot introuvable.",
     "getSupplier": "Fournisseur introuvable.",
     "listSupplierLots": "Fournisseur introuvable.",
+    "approveRegistrationRequest": "Demande d'inscription introuvable.",
+    "rejectRegistrationRequest": "Demande d'inscription introuvable.",
     "listLotReservations": "Lot introuvable.",
     "getReservation": "Réservation introuvable.",
 }

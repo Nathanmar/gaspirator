@@ -397,6 +397,11 @@ class LotPage(BaseModel):
     meta: PageMeta
 
 
+class RegistrationRequestPage(BaseModel):
+    data: list[RegistrationRequest]
+    meta: PageMeta
+
+
 class ReservationPage(BaseModel):
     data: list[Reservation]
     meta: PageMeta

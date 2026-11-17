@@ -23,6 +23,7 @@ from app.auth import create_access_token, hash_password
 from app.company_registry import RegistryUnavailable, get_company_registry
 from app.db import Base, get_session
 from app.geocoding import GeocodingUnavailable, get_geocoder
+from app.mail import Email, get_mailer
 from app.main import app
 from app.models import Association, RegistrationRequest, Supplier, User
 from app.schemas import (
@@ -126,6 +127,22 @@ def db(session_factory: sessionmaker[Session]) -> Iterator[Session]:
     """A session to arrange and inspect the database from a test."""
     with session_factory() as session:
         yield session
+
+
+class Outbox(list[Email]):
+    """Mailer of the tests: keeps the e-mails instead of sending them."""
+
+    def send(self, email: Email) -> None:
+        self.append(email)
+
+
+@pytest.fixture(autouse=True)
+def outbox() -> Iterator[Outbox]:
+    """E-mails sent by the API during the test; nothing goes through SMTP (Mailpit)."""
+    mailer = Outbox()
+    app.dependency_overrides[get_mailer] = lambda: mailer
+    yield mailer
+    app.dependency_overrides.pop(get_mailer, None)
 
 
 class FakeGeocoder:
@@ -341,6 +358,9 @@ def create_user(db: Session) -> Callable[..., User]:
                 postal_code="69002",
                 city="Lyon",
                 contact_phone="04 78 00 00 00",
+                # Geocoded position of the address (see `RegistrationRequest.latitude`).
+                latitude=45.7578,
+                longitude=4.832,
             )
         db.add(user)
         db.commit()
