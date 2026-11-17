@@ -30,7 +30,8 @@ _EMAIL_USED = "Cette adresse e-mail est déjà utilisée."
 _LEGAL_ID_USED = "Ce SIRET ou ce n° RNA est déjà utilisé."
 
 
-def _to_schema(request: models.RegistrationRequest) -> RegistrationRequest:
+def to_schema(request: models.RegistrationRequest) -> RegistrationRequest:
+    """Contract `RegistrationRequest` (also answered by the admin routes)."""
     address = Address(street=request.street, postal_code=request.postal_code, city=request.city)
     supplier = association = None
     if request.organization_type == OrganizationType.SUPPLIER:
@@ -128,4 +129,4 @@ def create_registration_request(
         message = _EMAIL_USED if "email" in str(exc.orig) else _LEGAL_ID_USED
         raise ApiError(409, "conflict", message) from exc
     session.refresh(request)
-    return _to_schema(request)
+    return to_schema(request)

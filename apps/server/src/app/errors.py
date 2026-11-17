@@ -68,6 +68,7 @@ _BAD_REQUEST_ON_VALIDATION = {
     "refreshToken",
     "logout",
     "listMyLots",
+    "listRegistrationRequests",
     "listMyReservations",
     "searchSuppliers",
 }
