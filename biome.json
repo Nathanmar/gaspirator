@@ -8,7 +8,13 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["apps/web/**", "apps/mobile/**", "!**/routeTree.gen.ts"]
+		"includes": [
+			"apps/web/**",
+			"apps/mobile/**",
+			"!**/routeTree.gen.ts",
+			"!apps/web/public/maplibre",
+			"!**/*.svg"
+		]
 	},
 	"css": {
 		"parser": {
@@ -25,6 +31,27 @@
 			"preset": "recommended"
 		}
 	},
+	"overrides": [
+		{
+			"includes": ["apps/web/test/**", "**/*.test.*"],
+			"linter": { "enabled": false }
+		},
+		{
+			"includes": ["apps/mobile/**"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noReactNativeRawText": {
+							"level": "error",
+							"options": {
+								"skip": ["ThemedText", "TabButton", "NativeTabs.Trigger.Label"]
+							}
+						}
+					}
+				}
+			}
+		}
+	],
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"

@@ -5,17 +5,19 @@ import { z } from "zod";
  * `Error` schema of the API contract (`openapi.yaml`), returned by every failed request.
  */
 const apiErrorBodySchema = z.object({
-  code: z.enum([
-    "bad_request",
-    "unauthorized",
-    "forbidden",
-    "not_found",
-    "validation_error",
-    "conflict",
-    "too_many_requests",
-  ]),
-  message: z.string(),
-  details: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
+	code: z.enum([
+		"bad_request",
+		"unauthorized",
+		"forbidden",
+		"not_found",
+		"validation_error",
+		"conflict",
+		"too_many_requests",
+	]),
+	message: z.string(),
+	details: z
+		.array(z.object({ field: z.string(), message: z.string() }))
+		.optional(),
 });
 
 type ApiErrorBody = z.infer<typeof apiErrorBodySchema>;
@@ -23,25 +25,27 @@ type ApiErrorBody = z.infer<typeof apiErrorBodySchema>;
 export type ApiErrorCode = ApiErrorBody["code"];
 export type ApiErrorDetail = NonNullable<ApiErrorBody["details"]>[number];
 
-const FALLBACK_MESSAGE = "Une erreur inattendue est survenue. Réessayez plus tard.";
-const NETWORK_MESSAGE = "Impossible de joindre le serveur. Vérifiez votre connexion.";
+const FALLBACK_MESSAGE =
+	"Une erreur inattendue est survenue. Réessayez plus tard.";
+const NETWORK_MESSAGE =
+	"Impossible de joindre le serveur. Vérifiez votre connexion.";
 
 /**
  * The API answered with an error status. `code` is null when the body does not follow the
  * contract format; `message` then falls back to a generic text that can be shown to the user.
  */
 export class ApiError extends Error {
-  readonly status: number;
-  readonly code: ApiErrorCode | null;
-  readonly details: ApiErrorDetail[];
+	readonly status: number;
+	readonly code: ApiErrorCode | null;
+	readonly details: ApiErrorDetail[];
 
-  constructor(status: number, body: ApiErrorBody | null) {
-    super(body?.message ?? FALLBACK_MESSAGE);
-    this.name = "ApiError";
-    this.status = status;
-    this.code = body?.code ?? null;
-    this.details = body?.details ?? [];
-  }
+	constructor(status: number, body: ApiErrorBody | null) {
+		super(body?.message ?? FALLBACK_MESSAGE);
+		this.name = "ApiError";
+		this.status = status;
+		this.code = body?.code ?? null;
+		this.details = body?.details ?? [];
+	}
 }
 
 /**
@@ -49,19 +53,19 @@ export class ApiError extends Error {
  * The original error is kept in `cause` for debugging.
  */
 export class NetworkError extends Error {
-  constructor(options?: ErrorOptions) {
-    super(NETWORK_MESSAGE, options);
-    this.name = "NetworkError";
-  }
+	constructor(options?: ErrorOptions) {
+		super(NETWORK_MESSAGE, options);
+		this.name = "NetworkError";
+	}
 }
 
 type ApiRequestOptions = {
-  // The contract only uses these two methods.
-  method: "GET" | "POST";
-  // Serialized as JSON.
-  body?: unknown;
-  // Access token of the logged-in user, for the routes that are not public (`security: []`).
-  accessToken?: string;
+	// The contract only uses these two methods.
+	method: "GET" | "POST";
+	// Serialized as JSON.
+	body?: unknown;
+	// Access token of the logged-in user, for the routes that are not public (`security: []`).
+	accessToken?: string;
 };
 
 /**
@@ -71,38 +75,38 @@ type ApiRequestOptions = {
  * @throws {NetworkError} when the API cannot be reached.
  */
 export async function apiRequest<T>(
-  path: string,
-  { method, body, accessToken }: ApiRequestOptions,
+	path: string,
+	{ method, body, accessToken }: ApiRequestOptions,
 ): Promise<T> {
-  const headers = new Headers();
-  if (body !== undefined) headers.set("Content-Type", "application/json");
-  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+	const headers = new Headers();
+	if (body !== undefined) headers.set("Content-Type", "application/json");
+	if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
 
-  let response: Response;
-  try {
-    response = await fetch(`${env.VITE_API_URL}${path}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-  } catch (error) {
-    throw new NetworkError({ cause: error });
-  }
+	let response: Response;
+	try {
+		response = await fetch(`${env.VITE_API_URL}${path}`, {
+			method,
+			headers,
+			body: body === undefined ? undefined : JSON.stringify(body),
+		});
+	} catch (error) {
+		throw new NetworkError({ cause: error });
+	}
 
-  if (!response.ok) {
-    throw new ApiError(response.status, await readErrorBody(response));
-  }
+	if (!response.ok) {
+		throw new ApiError(response.status, await readErrorBody(response));
+	}
 
-  // 204 No Content (e.g. logout): there is no body to read.
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+	// 204 No Content (e.g. logout): there is no body to read.
+	if (response.status === 204) return undefined as T;
+	return (await response.json()) as T;
 }
 
 async function readErrorBody(response: Response): Promise<ApiErrorBody | null> {
-  // The body may not be JSON at all (HTML page from a proxy, empty body…).
-  const json: unknown = await response.json().catch(() => null);
-  const result = apiErrorBodySchema.safeParse(json);
-  return result.success ? result.data : null;
+	// The body may not be JSON at all (HTML page from a proxy, empty body…).
+	const json: unknown = await response.json().catch(() => null);
+	const result = apiErrorBodySchema.safeParse(json);
+	return result.success ? result.data : null;
 }
 
 /**
@@ -111,10 +115,11 @@ async function readErrorBody(response: Response): Promise<ApiErrorBody | null> {
  * NetworkError is a bug: it is rethrown instead of being hidden behind a message.
  */
 export function errorMessage(
-  error: unknown,
-  messagesByStatus: Partial<Record<number, string>> = {},
+	error: unknown,
+	messagesByStatus: Partial<Record<number, string>> = {},
 ): string {
-  if (error instanceof ApiError) return messagesByStatus[error.status] ?? error.message;
-  if (error instanceof NetworkError) return error.message;
-  throw error;
+	if (error instanceof ApiError)
+		return messagesByStatus[error.status] ?? error.message;
+	if (error instanceof NetworkError) return error.message;
+	throw error;
 }

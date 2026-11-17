@@ -32,8 +32,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Same check as the pre-commit hook, on files changed vs develop only.
-      # shortcut: existing files are not formatted yet, switch to `biome ci .` once they are.
       - name: Biome
         run: pnpm exec biome ci --changed --since=origin/develop --no-errors-on-unmatched
 
