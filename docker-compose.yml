@@ -69,5 +69,15 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # Mailpit: fake SMTP server for development. It catches every e-mail sent by the API
+  # (never delivered to real addresses) and shows them on http://localhost:8025.
+  # From the `app` container the SMTP server is mailpit:1025, from the host localhost:1025.
+  mailpit:
+    image: axllent/mailpit:v1.33.0
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web UI
+    restart: unless-stopped
+
 volumes:
   db-data:
