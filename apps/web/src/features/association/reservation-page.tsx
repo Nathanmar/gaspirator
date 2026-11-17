@@ -11,6 +11,7 @@ import {
 import { STORAGE_LABELS } from "@/lib/labels";
 
 import type { Reservation } from "./association-api";
+import { LotImage } from "./lot-image";
 import {
 	BackLink,
 	eyebrowClass,
@@ -36,7 +37,13 @@ export function ReservationPage({ reservation }: { reservation: Reservation }) {
 		<div className="max-w-2xl">
 			<BackLink to="/association">Mes collectes</BackLink>
 
-			<p className={`mt-4 ${eyebrowClass}`}>
+			<LotImage
+				lot={lot}
+				className="mt-4 h-36 rounded-[28px] md:h-44"
+				iconClassName="size-12"
+			/>
+
+			<p className={`mt-6 ${eyebrowClass}`}>
 				{isBooked ? "Collecte à venir" : "Collecte terminée"}
 			</p>
 			<h1 className={pageTitleClass}>{lot.title}</h1>
@@ -70,10 +77,16 @@ export function ReservationPage({ reservation }: { reservation: Reservation }) {
 				<div>
 					<dt className={`flex items-center gap-2 ${labelClass}`}>
 						<Clock className="size-4" aria-hidden="true" />
-						Passage
+						Passage prévu
 					</dt>
-					<dd className="mt-1 text-lg font-semibold">
-						{formatPickupWindow(lot.pickup_start, lot.pickup_end)}
+					<dd className="mt-1">
+						<p className="text-lg font-semibold">
+							{formatDateTime(reservation.pickup_at)}
+						</p>
+						<p className="text-sm text-cream/70">
+							Créneau du fournisseur&nbsp;:{" "}
+							{formatPickupWindow(lot.pickup_start, lot.pickup_end)}
+						</p>
 					</dd>
 				</div>
 				<div>

@@ -1,12 +1,8 @@
-import { formatAddress, formatDistance } from "@/lib/format";
+import { formatAddress, formatDistance, pluralize } from "@/lib/format";
 import { SUPPLIER_TYPE_LABELS } from "@/lib/labels";
 
 import type { SupplierSearchResult } from "./association-api";
 import { labelClass, PhoneLink } from "./space-ui";
-
-export function plural(count: number, one: string, many: string) {
-	return `${count} ${count > 1 ? many : one}`;
-}
 
 export function SupplierCard({ supplier }: { supplier: SupplierSearchResult }) {
 	const lots = supplier.available_lots_count;
@@ -33,7 +29,7 @@ export function SupplierCard({ supplier }: { supplier: SupplierSearchResult }) {
 
 			<div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
 				<p className="font-semibold text-lime">
-					{plural(lots, "lot disponible", "lots disponibles")}
+					{pluralize(lots, "lot disponible", "lots disponibles")}
 				</p>
 				<PhoneLink phone={supplier.contact_phone} />
 			</div>

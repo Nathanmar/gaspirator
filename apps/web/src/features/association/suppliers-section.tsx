@@ -3,12 +3,13 @@ import { List, Map as MapIcon } from "lucide-react";
 import { useState } from "react";
 
 import type { Page } from "@/lib/api-client";
+import { pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import type { SupplierSearchResult } from "./association-api";
 import { RADIUS_OPTIONS } from "./association-loader";
 import { EmptyState, sectionTitleClass } from "./space-ui";
-import { plural, SupplierCard } from "./supplier-card";
+import { SupplierCard } from "./supplier-card";
 import { SuppliersMap } from "./suppliers-map";
 
 type View = "list" | "map";
@@ -69,8 +70,8 @@ export function SuppliersSection({
 			{hasSuppliers ? (
 				<>
 					<p className="mt-3 text-sm text-cream/70">
-						{plural(suppliers.meta.total, "fournisseur", "fournisseurs")} avec
-						des lots à moins de {radius} km
+						{pluralize(suppliers.meta.total, "fournisseur", "fournisseurs")}{" "}
+						avec des lots à moins de {radius} km
 					</p>
 					<div className="mt-4">
 						{view === "list" ? (

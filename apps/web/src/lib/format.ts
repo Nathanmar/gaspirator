@@ -53,6 +53,21 @@ export function formatPickupWindow(startIso: string, endIso: string): string {
 	return `du ${formatDateTime(startIso)} au ${formatDateTime(endIso)}`;
 }
 
+const month = new Intl.DateTimeFormat("fr-FR", {
+	month: "long",
+	year: "numeric",
+	timeZone: TIME_ZONE,
+});
+
+export function formatMonth(iso: string): string {
+	const label = month.format(new Date(iso));
+	return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+export function pluralize(count: number, one: string, many: string): string {
+	return `${count} ${count > 1 ? many : one}`;
+}
+
 // A calendar date (use-by date) has no time: read in UTC, it never moves to the day before.
 const calendarDay = new Intl.DateTimeFormat("fr-FR", {
 	weekday: "short",
