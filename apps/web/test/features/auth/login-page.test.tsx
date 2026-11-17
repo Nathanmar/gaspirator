@@ -56,14 +56,19 @@ describe("LoginPage", () => {
     expect(useAuthStore.getState().tokens).toBeNull();
   });
 
-  it("explains that the account is not active yet (403)", async () => {
-    mockFetch(jsonResponse(403, { code: "forbidden", message: "Compte en attente." }));
+  it("shows the server's explanation when the account is not active yet (403)", async () => {
+    mockFetch(
+      jsonResponse(403, {
+        code: "forbidden",
+        message: "Votre demande d'inscription est en attente de validation.",
+      }),
+    );
     renderWithRouter(<LoginPage />, { path: "/login" });
 
     await logIn();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Votre compte n'est pas encore actif : votre demande d'inscription est en attente de validation ou a été refusée.",
+      "Votre demande d'inscription est en attente de validation.",
     );
   });
 

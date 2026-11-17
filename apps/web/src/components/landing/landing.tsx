@@ -16,7 +16,13 @@ export function Landing() {
   useLandingMotion(rootRef, canvasRef);
 
   return (
-    <div ref={rootRef} className="landing relative isolate bg-ink font-display text-cream">
+    // `overflow-x-clip`: some sections start their animations off to the right (actor cards, the
+    // horizontal circuit track); without it the page is wider than a phone screen and the header
+    // button ends up off-screen. `clip` rather than `hidden` keeps sticky and pinned sections working.
+    <div
+      ref={rootRef}
+      className="landing relative isolate overflow-x-clip bg-ink font-display text-cream"
+    >
       <div aria-hidden="true" className="landing-glow pointer-events-none fixed inset-0 opacity-50" />
       <canvas
         ref={canvasRef}
