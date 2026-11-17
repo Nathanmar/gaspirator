@@ -408,7 +408,8 @@ def main() -> None:
             return
     print(
         f"Seed: {len(SUPPLIERS)} suppliers, {len(ASSOCIATIONS)} associations, "
-        f"{len(LOTS)} lots. Log in as {ADMIN_EMAIL} or any manager, password {DEV_PASSWORD}."
+        f"{len(LOTS)} lots. Accounts and their password: see the README "
+        "(Development data)."
     )
 
 
