@@ -21,7 +21,7 @@ function PublishVisual() {
 						key={label}
 						className="flex justify-between gap-4 py-2 [@media(max-height:760px)]:nth-3:hidden"
 					>
-						<dt className="text-cream/50">{label}</dt>
+						<dt className="text-cream/70">{label}</dt>
 						<dd className="text-right">{value}</dd>
 					</div>
 				))}
@@ -80,7 +80,7 @@ function ReserveVisual() {
           keeps the raised (selected) pin under the donation row. */}
 			<div ref={mapRef} className="isolate h-full w-full" />
 			{/* Map data credit, required by the OpenStreetMap and CARTO licences. */}
-			<p className="pointer-events-none absolute top-1.5 right-2 font-mono text-[8px] tracking-wide text-cream/30">
+			<p className="pointer-events-none absolute top-1.5 right-2 font-mono text-[8px] tracking-wide text-cream/70">
 				© OpenStreetMap · CARTO
 			</p>
 			<div className="absolute inset-x-2 bottom-2 flex items-center justify-between gap-3 rounded-xl border border-cream/10 bg-ink/85 py-2 pr-2 pl-3 backdrop-blur-md">
@@ -90,7 +90,7 @@ function ReserveVisual() {
 					className="min-w-0 animate-in duration-300 fade-in slide-in-from-bottom-1"
 				>
 					<p className="truncate">{selected.name}</p>
-					<p className="truncate font-mono text-[10px] tracking-[0.12em] text-cream/50 uppercase">
+					<p className="truncate font-mono text-[10px] tracking-[0.12em] text-cream/70 uppercase">
 						{selected.distance} · {selected.portions} portions
 					</p>
 				</div>
@@ -118,7 +118,7 @@ function PickupVisual() {
 					</span>
 				))}
 			</div>
-			<p className="mt-4 text-sm text-cream/50">À présenter au fournisseur</p>
+			<p className="mt-4 text-sm text-cream/70">À présenter au fournisseur</p>
 		</div>
 	);
 }
@@ -130,7 +130,7 @@ function ConfirmVisual() {
 				<Check className="size-8" strokeWidth={2.5} />
 			</div>
 			<p className="mt-4 text-lg">Remise confirmée</p>
-			<p className="font-mono text-[10px] tracking-[0.15em] text-cream/50 uppercase">
+			<p className="font-mono text-[10px] tracking-[0.15em] text-cream/70 uppercase">
 				42 portions · 18:47
 			</p>
 		</div>
@@ -177,7 +177,7 @@ export function CircuitSection() {
 								<span className="font-display text-6xl leading-none font-bold tracking-[-0.05em] text-cream/15 [font-stretch:75%]">
 									{step.index}
 								</span>
-								<span className="font-mono text-[10px] tracking-[0.18em] text-cream/50 uppercase">
+								<span className="font-mono text-[10px] tracking-[0.18em] text-cream/70 uppercase">
 									{step.actor}
 								</span>
 							</div>

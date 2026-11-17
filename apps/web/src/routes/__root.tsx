@@ -28,17 +28,6 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 				content: "gaspirator is a web application",
 			},
 		],
-		links: [
-			{
-				rel: "icon",
-				href: "/favicon.ico",
-			},
-			{
-				rel: "icon",
-				type: "image/svg+xml",
-				href: "/favicon.svg",
-			},
-		],
 	}),
 });
 

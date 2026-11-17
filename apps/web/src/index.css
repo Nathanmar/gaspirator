@@ -37,7 +37,7 @@ html.landing-active,
 	--color-ink: #f4f0e6;
 	--color-cream: #10150f;
 	--color-lime: #4c7a0c;
-	--color-tomato: #e23f1c;
+	--color-tomato: #c8341a; /* ≥ 4.5:1 against the paper-coloured button label */
 }
 
 html.landing-active {

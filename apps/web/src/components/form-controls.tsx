@@ -1,4 +1,11 @@
-import { ArrowUpRight, CircleAlert, LoaderCircle } from "lucide-react";
+import { Select as SelectPrimitive } from "@base-ui/react/select";
+import {
+	ArrowUpRight,
+	Check,
+	ChevronDown,
+	CircleAlert,
+	LoaderCircle,
+} from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
@@ -77,25 +84,76 @@ export function TextField({
 	);
 }
 
-/** Native select: on mobile it opens the system picker, easier to use than a custom list. */
-export function SelectField({
+/** Select in the landing style (Base UI). An empty string means nothing is chosen yet. */
+export function SelectField<T extends string>({
 	id,
 	label,
 	error,
-	className,
-	children,
-	...props
-}: FieldProps & Omit<ComponentProps<"select">, "id">) {
+	name,
+	options,
+	value,
+	placeholder,
+	onChange,
+	onBlur,
+}: FieldProps & {
+	name: string;
+	options: readonly { value: T; label: string }[];
+	value: T | "";
+	placeholder: string;
+	onChange: (value: T) => void;
+	onBlur: () => void;
+}) {
 	return (
 		<LabelledField id={id} label={label} error={error}>
-			<select
-				id={id}
-				className={cn(controlClass, className)}
-				{...errorAttributes(id, error)}
-				{...props}
+			<SelectPrimitive.Root
+				name={name}
+				items={options}
+				value={value === "" ? null : value}
+				onValueChange={(next) => next !== null && onChange(next)}
 			>
-				{children}
-			</select>
+				<SelectPrimitive.Trigger
+					id={id}
+					onBlur={onBlur}
+					className={cn(
+						controlClass,
+						"flex items-center justify-between gap-2 text-left",
+					)}
+					{...errorAttributes(id, error)}
+				>
+					<SelectPrimitive.Value
+						placeholder={placeholder}
+						className="truncate data-placeholder:text-cream/40"
+					/>
+					<SelectPrimitive.Icon>
+						<ChevronDown aria-hidden="true" className="size-4 text-cream/60" />
+					</SelectPrimitive.Icon>
+				</SelectPrimitive.Trigger>
+				<SelectPrimitive.Portal>
+					{/* `landing` brings the colour tokens into the portal, outside the page's wrapper. */}
+					<SelectPrimitive.Positioner
+						sideOffset={6}
+						alignItemWithTrigger={false}
+						className="landing z-50 outline-none"
+					>
+						<SelectPrimitive.Popup className="max-h-(--available-height) w-(--anchor-width) overflow-y-auto rounded-2xl border border-cream/15 bg-white p-1.5 font-display text-cream shadow-lg outline-none">
+							{options.map((option) => (
+								<SelectPrimitive.Item
+									key={option.value}
+									value={option.value}
+									className="flex h-11 cursor-pointer items-center justify-between gap-2 rounded-xl px-3 text-base outline-none select-none data-highlighted:bg-lime/15"
+								>
+									<SelectPrimitive.ItemText>
+										{option.label}
+									</SelectPrimitive.ItemText>
+									<SelectPrimitive.ItemIndicator>
+										<Check aria-hidden="true" className="size-4 text-lime" />
+									</SelectPrimitive.ItemIndicator>
+								</SelectPrimitive.Item>
+							))}
+						</SelectPrimitive.Popup>
+					</SelectPrimitive.Positioner>
+				</SelectPrimitive.Portal>
+			</SelectPrimitive.Root>
 		</LabelledField>
 	);
 }

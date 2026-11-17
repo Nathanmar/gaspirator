@@ -39,6 +39,11 @@ const SUPPLIER_TYPE_LABELS: Record<SupplierType, string> = {
 	other: "Autre",
 };
 
+const SUPPLIER_TYPE_OPTIONS = SUPPLIER_TYPES.map((value) => ({
+	value,
+	label: SUPPLIER_TYPE_LABELS[value],
+}));
+
 const LEGAL_ID_LABELS: Record<OrganizationType | "", string> = {
 	supplier: "SIRET",
 	association: "N° RNA",
@@ -83,7 +88,7 @@ function StepHeader({
 	}, [focus]);
 
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="flex flex-col gap-2">
 			<div aria-hidden="true" className="grid grid-cols-2 gap-2">
 				<span className="h-1 rounded-full bg-lime" />
 				<span
@@ -117,7 +122,7 @@ function StepForm({
 	return (
 		<form
 			noValidate
-			className="flex flex-col gap-5"
+			className="flex flex-col gap-4"
 			onSubmit={(e) => {
 				e.preventDefault();
 				void onSubmit();
@@ -153,7 +158,7 @@ function AccountStep({
 		<StepForm onSubmit={form.handleSubmit}>
 			<StepHeader step={1} title="Votre compte" focus={focusTitle} />
 
-			<div className="grid gap-5 sm:grid-cols-2">
+			<div className="grid gap-4 sm:grid-cols-2">
 				<form.Field name="firstname">
 					{(field) => (
 						<BoundTextField
@@ -188,33 +193,35 @@ function AccountStep({
 				)}
 			</form.Field>
 
-			<form.Field name="password">
-				{(field) => (
-					<BoundTextField
-						field={field}
-						idPrefix="account"
-						label="Mot de passe"
-						type="password"
-						autoComplete="new-password"
-					/>
-				)}
-			</form.Field>
+			<div className="grid gap-4 sm:grid-cols-2">
+				<form.Field name="password">
+					{(field) => (
+						<BoundTextField
+							field={field}
+							idPrefix="account"
+							label="Mot de passe"
+							type="password"
+							autoComplete="new-password"
+						/>
+					)}
+				</form.Field>
 
-			<form.Field name="password_confirmation">
-				{(field) => (
-					<BoundTextField
-						field={field}
-						idPrefix="account"
-						label="Confirmation du mot de passe"
-						type="password"
-						autoComplete="new-password"
-					/>
-				)}
-			</form.Field>
+				<form.Field name="password_confirmation">
+					{(field) => (
+						<BoundTextField
+							field={field}
+							idPrefix="account"
+							label="Confirmation du mot de passe"
+							type="password"
+							autoComplete="new-password"
+						/>
+					)}
+				</form.Field>
+			</div>
 
 			{/* An intermediate step: a shorter button than the final "Envoyer ma demande", on the right
           like a "next" action. */}
-			<div className="mt-3 flex justify-end">
+			<div className="mt-1 flex justify-end">
 				<SubmitButton className="w-auto min-w-52">Continuer</SubmitButton>
 			</div>
 		</StepForm>
@@ -265,55 +272,62 @@ function OrganizationStep({
 				)}
 			</form.Field>
 
-			<form.Field name="name">
-				{(field) => (
-					<BoundTextField
-						field={field}
-						idPrefix="organization"
-						label="Nom de l'organisation"
-						autoComplete="organization"
-					/>
-				)}
-			</form.Field>
-
-			<form.Field name="legal_id">
-				{(field) => (
-					<BoundTextField
-						field={field}
-						idPrefix="organization"
-						label={LEGAL_ID_LABELS[type]}
-						autoComplete="off"
-						// A SIRET is only digits: show the numeric keypad on mobile.
-						inputMode={type === "supplier" ? "numeric" : "text"}
-						placeholder={type === "association" ? "W123456789" : undefined}
-					/>
-				)}
-			</form.Field>
-
-			{type === "supplier" && (
-				<form.Field name="supplier_type">
+			<div className="grid gap-4 sm:grid-cols-2">
+				<form.Field name="name">
 					{(field) => (
-						<SelectField
-							id="organization-supplier_type"
-							name={field.name}
-							label="Type d'établissement"
-							value={field.state.value}
-							onBlur={field.handleBlur}
-							onChange={(e) =>
-								field.handleChange(e.target.value as SupplierType | "")
-							}
-							error={firstError(field)}
-						>
-							<option value="">Choisir…</option>
-							{SUPPLIER_TYPES.map((supplierType) => (
-								<option key={supplierType} value={supplierType}>
-									{SUPPLIER_TYPE_LABELS[supplierType]}
-								</option>
-							))}
-						</SelectField>
+						<BoundTextField
+							field={field}
+							idPrefix="organization"
+							label="Nom de l'organisation"
+							autoComplete="organization"
+						/>
 					)}
 				</form.Field>
-			)}
+
+				<form.Field name="legal_id">
+					{(field) => (
+						<BoundTextField
+							field={field}
+							idPrefix="organization"
+							label={LEGAL_ID_LABELS[type]}
+							autoComplete="off"
+							// A SIRET is only digits: show the numeric keypad on mobile.
+							inputMode={type === "supplier" ? "numeric" : "text"}
+							placeholder={type === "association" ? "W123456789" : undefined}
+						/>
+					)}
+				</form.Field>
+
+				{type === "supplier" && (
+					<form.Field name="supplier_type">
+						{(field) => (
+							<SelectField
+								id="organization-supplier_type"
+								name={field.name}
+								label="Type d'établissement"
+								placeholder="Choisir…"
+								options={SUPPLIER_TYPE_OPTIONS}
+								value={field.state.value}
+								onBlur={field.handleBlur}
+								onChange={(value) => field.handleChange(value)}
+								error={firstError(field)}
+							/>
+						)}
+					</form.Field>
+				)}
+
+				<form.Field name="contact_phone">
+					{(field) => (
+						<BoundTextField
+							field={field}
+							idPrefix="organization"
+							label="Téléphone"
+							type="tel"
+							autoComplete="tel"
+						/>
+					)}
+				</form.Field>
+			</div>
 
 			<form.Field name="address.street">
 				{(field) => (
@@ -326,7 +340,7 @@ function OrganizationStep({
 				)}
 			</form.Field>
 
-			<div className="grid gap-5 sm:grid-cols-[10rem_1fr]">
+			<div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
 				<form.Field name="address.postal_code">
 					{(field) => (
 						<BoundTextField
@@ -350,25 +364,18 @@ function OrganizationStep({
 				</form.Field>
 			</div>
 
-			<form.Field name="contact_phone">
-				{(field) => (
-					<BoundTextField
-						field={field}
-						idPrefix="organization"
-						label="Téléphone"
-						type="tel"
-						autoComplete="tel"
-					/>
-				)}
-			</form.Field>
-
 			{/* The error sits next to the submit button, where the user is looking. */}
-			<div className="mt-3 flex flex-col gap-3">
+			<div className="mt-1 flex flex-col gap-3">
 				{error && <FormAlert>{error}</FormAlert>}
 				<form.Subscribe selector={(state) => state.isSubmitting}>
 					{(isSubmitting) => (
-						<>
-							<SubmitButton pending={isSubmitting} pendingLabel="Envoi…">
+						// Submit first in the DOM (tab order); "Retour" shows on its left from `sm` up.
+						<div className="flex flex-col gap-3 sm:flex-row-reverse sm:items-center">
+							<SubmitButton
+								pending={isSubmitting}
+								pendingLabel="Envoi…"
+								className="sm:flex-1"
+							>
 								Envoyer ma demande
 							</SubmitButton>
 							<button
@@ -380,7 +387,7 @@ function OrganizationStep({
 								<ArrowLeft aria-hidden="true" className="size-4" />
 								Retour
 							</button>
-						</>
+						</div>
 					)}
 				</form.Subscribe>
 			</div>
