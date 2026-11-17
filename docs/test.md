@@ -24,14 +24,24 @@ apps/web/
     ├── components/
     │   ├── loader.test.tsx
     │   └── landing/hud.test.tsx
-    └── features/auth/
-        ├── auth-api.test.ts
-        ├── auth-store.test.ts
-        ├── login-form.test.tsx
-        ├── login-page.test.tsx
-        ├── login-schema.test.ts
-        ├── register-page.test.tsx
-        └── register-schema.test.ts
+    ├── lib/
+    │   └── format.test.ts
+    └── features/
+        ├── association/
+        │   ├── association-api.test.ts
+        │   ├── association-home.test.tsx
+        │   └── association-loader.test.ts
+        └── auth/
+            ├── auth-api.test.ts
+            ├── auth-guard.test.ts
+            ├── auth-store.test.ts
+            ├── authorized-request.test.ts
+            ├── login-form.test.tsx
+            ├── login-page.test.tsx
+            ├── login-schema.test.ts
+            ├── me.test.ts
+            ├── register-page.test.tsx
+            └── register-schema.test.ts
 ```
 
 - `test/` reproduit l'arborescence de `src/` : le test de `src/a/b.ts` est `test/a/b.test.ts`.
@@ -64,7 +74,7 @@ Depuis `apps/web` :
 
 Depuis la racine, `pnpm test` lance aussi les tests du web.
 
-La CI ne lance pas encore Vitest (seulement `check-types` et `build`) : lancer `pnpm test` avant de pousser.
+La CI web (`.github/workflows/webci.yml`) lance `check-types`, `pnpm test` et `build` sur les PR vers `develop`.
 
 ## Outils partagés
 
@@ -75,8 +85,10 @@ Les tests ne contactent jamais de serveur : ils remplacent `fetch` par un mock (
 | Outil | Rôle |
 | ----- | ---- |
 | `mockFetch(response)` | Remplace `fetch` par un mock qui renvoie `response` et le retourne pour vérifier les appels |
+| `mockApi({ "/me": response, … })` | Remplace `fetch` par un mock qui répond selon le chemin, quelle que soit la query string. Pour les écrans qui font plusieurs requêtes |
 | `jsonResponse(status, body)` | Construit une vraie `Response` JSON (`new Response(...)`), comme celle d'un navigateur |
 | `sentBody(fetchMock)` | Relit le corps JSON de la première requête envoyée |
+| `requestedPaths(fetchMock)` | Chemins demandés, dans l'ordre, avec la query string (`/suppliers?radius_km=25`) |
 
 Pour simuler une coupure réseau : `globalThis.fetch = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("Failed to fetch"))`.
 
@@ -88,7 +100,7 @@ Le corps d'une `Response` ne se lit qu'une fois : appeler le code testé une seu
 
 ### Données : `test/fixtures/`
 
-`tokens` (réponse de `POST /auth/login`), `supplierRegistration`, `associationRegistration` et `createdRegistration` (requêtes et réponse de `POST /registration-requests`). Elles sont typées avec les types du contrat (`satisfies`) : si le contrat change, `check-types` le signale.
+`tokens` (réponse de `POST /auth/login`), `supplierRegistration`, `associationRegistration` et `createdRegistration` (requêtes et réponse de `POST /registration-requests`). `association.ts` : les comptes renvoyés par `GET /me` (`associationMe`, `supplierMe`, `adminMe`), des fournisseurs trouvés autour de l'association et des réservations (à venir, collectée), plus `firstPage(data)` pour une réponse paginée. Elles sont typées avec les types du contrat (`satisfies`) : si le contrat change, `check-types` le signale.
 
 ## Écrire un test
 
@@ -125,13 +137,15 @@ Chaque fonctionnalité suit le cycle Red → Green → Refactor, avec un commit 
 
 | Étape | Contenu du commit | Message |
 | ----- | ----------------- | ------- |
-| Red | Uniquement les tests, qui échouent | `test(web): RED <description>` |
-| Green | Uniquement le code minimal qui les fait passer, **sans modifier les tests** | `feat(web): GREEN <description>` |
-| Refactor | Nettoyage sans changer le comportement, tests toujours verts | `refactor(web): REFACTOR <description>` |
+| Red | Uniquement les tests, qui échouent | `test(web): <description>` |
+| Green | Uniquement le code minimal qui les fait passer, **sans modifier les tests** | `feat(web): <description>` ou `fix(web): …` |
+| Refactor | Nettoyage sans changer le comportement, tests toujours verts | `refactor(web): <description>` |
+
+Le type du commit indique l'étape : commitlint refuse un sujet qui commence par une majuscule, comme `RED` ou `GREEN`.
 
 Ne pas ouvrir de PR sur un commit Red : `check-types` échoue tant que le code testé n'existe pas.
 
-Une fonctionnalité découpée en plusieurs étapes utilise des branches empilées : chaque branche part de la précédente (`test/auth-api` → `test/auth-store` → `test/login-page` → `test/register-schema` → `test/register-page`), et la PR de la dernière contient tout.
+Chaque branche part de `develop` à jour et sa PR vise `develop`. Son préfixe suit ce qu'elle apporte (`feat/…` pour une fonctionnalité, même faite en TDD), pas l'étape TDD.
 
 ## Ce qui est testé
 
@@ -197,7 +211,9 @@ Formulaire de connexion (TanStack Form) validé par `loginSchema`. Il reçoit un
 | --- | ---------------- |
 | `?role=supplier` | Affiche « Espace fournisseur » |
 | Lien d'inscription | « Créer un compte » mène à `/register` avec le même `role` |
-| Connexion réussie | Tokens enregistrés, redirection vers `/` |
+| Connexion d'une association | Tokens enregistrés, `GET /me`, redirection vers `/association` |
+| Connexion d'un autre compte (fournisseur, admin) | Redirection vers `/` : leur espace n'existe pas encore |
+| `GET /me` en échec après la connexion | L'utilisateur reste connecté, redirection vers `/` |
 | 401 | « E-mail ou mot de passe incorrect. » (notre texte, pas celui du serveur) |
 | 403 | Message du serveur (demande en attente ou refusée) |
 | Serveur injoignable | Message de `NetworkError` |
@@ -242,14 +258,83 @@ Inscription en deux étapes : le compte, puis l'organisation.
 | 422 | « Certaines informations ont été refusées : » suivi des champs refusés, avec leur libellé (« E-mail : adresse e-mail invalide ») |
 | Serveur injoignable | Message de `NetworkError` |
 
-### `redirectIfLoggedIn` — `src/features/auth/auth-guard.ts`
+### `redirectIfLoggedIn` et `requireLogin` — `src/features/auth/auth-guard.ts`
 
-`beforeLoad` des routes `/login` et `/register`.
+`redirectIfLoggedIn` est le `beforeLoad` des routes `/login` et `/register`, `requireLogin(role)` celui des espaces connectés.
 
 | Cas | Résultat attendu |
 | --- | ---------------- |
-| Visiteur | La page s'ouvre |
-| Utilisateur connecté | Redirection vers `/` |
+| Visiteur sur `/login` | La page s'ouvre |
+| Utilisateur connecté sur `/login` | Redirection vers `/` |
+| Utilisateur connecté sur un espace | La page s'ouvre |
+| Visiteur sur un espace | Redirection vers `/login?role=association` |
+
+### `authorizedRequest` — `src/features/auth/authorized-request.ts`
+
+Appel d'une route réservée aux utilisateurs connectés. Le token d'accès dure 15 minutes ; le contrat demande au client de le renouveler lui-même (`POST /auth/refresh`).
+
+| Cas | Résultat attendu |
+| --- | ---------------- |
+| Requête | En-tête `Authorization: Bearer <access_token>` |
+| 401 (token d'accès expiré) | `POST /auth/refresh` avec le refresh token, nouveaux tokens enregistrés, la requête repart avec le nouveau token |
+| Deux requêtes expirées en même temps | Un seul renouvellement : l'API invalide un refresh token dès qu'il sert |
+| Refresh token refusé | Tokens oubliés, `SessionExpiredError` (« Votre session a expiré. Reconnectez-vous. ») |
+| Serveur injoignable pendant le renouvellement | `NetworkError`, la session est gardée |
+| Pas de session | `SessionExpiredError`, aucune requête |
+
+### `getMe` et `homePath` — `src/features/auth/me.ts`
+
+| Cas | Résultat attendu |
+| --- | ---------------- |
+| `getMe` | `GET /me`, renvoie l'utilisateur connecté |
+| Responsable d'une association | `homePath` vaut `/association` |
+| Fournisseur, admin | `homePath` vaut `/` (pas encore d'espace) |
+
+### `searchSuppliers` et `listMyReservations` — `src/features/association/association-api.ts`
+
+| Cas | Résultat attendu |
+| --- | ---------------- |
+| `searchSuppliers({ radius_km: 25 })` | `GET /suppliers?radius_km=25` avec le token ; sans latitude ni longitude, l'API cherche autour de l'association |
+| `listMyReservations()` | `GET /me/reservations` |
+
+### `loadAssociationHome` et `associationSearchSchema` — `src/features/association/association-loader.ts`
+
+Loader de la route `/association`.
+
+| Cas | Résultat attendu |
+| --- | ---------------- |
+| Responsable d'une association | `GET /me`, puis réservations et fournisseurs en parallèle |
+| Compte sans association | Redirection vers `/`, aucune autre requête |
+| Session expirée | Message « Votre session a expiré. Reconnectez-vous. », redirection vers `/login?role=association` |
+| `?radius_km=25` | Gardé |
+| Autre rayon (`7`, `loin`) | Ignoré : rayon par défaut (10 km) |
+
+### `AssociationHome` — `src/features/association/association-home.tsx`
+
+Page vue par une association une fois connectée.
+
+| Cas | Résultat attendu |
+| --- | ---------------- |
+| Accueil | « Bonjour Marie » et le nom de l'association |
+| Collectes à venir | Réservations `booked`, la plus proche d'abord |
+| Contenu d'une collecte | Lot, quantité (« 12 portions »), conservation (« Réfrigéré »), fournisseur et adresse, heure de passage à l'heure de Lyon, code de collecte (« 482 913 ») |
+| Réservations collectées | Liste « Déjà collectées », sans le code |
+| Aucune collecte | « Aucune collecte prévue pour l'instant. » |
+| Fournisseurs autour | Dans l'ordre de l'API (le plus proche d'abord) : type, nom, distance (« 350 m », « 4,3 km »), nombre de lots, adresse |
+| Téléphone d'un fournisseur | Lien `tel:` |
+| Rayon de recherche | Liens 5, 10, 25 et 50 km ; le rayon actuel porte `aria-current="page"` |
+| Aucun fournisseur | « Aucun fournisseur n'a de lot disponible à moins de 10 km. » et un lien vers le rayon suivant (pas à 50 km) |
+| « Se déconnecter » | Tokens oubliés, retour à `/` |
+
+### Formats — `src/lib/format.ts`
+
+| Cas | Résultat attendu |
+| --- | ---------------- |
+| Distance de moins d'1 km | En mètres (« 350 m ») |
+| Autre distance | En km, une décimale (« 4,3 km ») |
+| Quantité | Unité en français (« 12 portions », « 3,5 kg », « 24 pièces ») ; singulier pour 1 |
+| Date et heure | Heure de Lyon, quel que soit le fuseau de l'appareil (« mar. 3 nov. à 15:15 », heure d'été comprise) |
+| Code de collecte | Deux groupes de trois chiffres (« 482 913 ») |
 
 ### `Hud` — `src/components/landing/hud.tsx`
 
