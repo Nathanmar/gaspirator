@@ -31,7 +31,7 @@ pnpm setup:server
 
 Copy `apps/server/.env.example` to `apps/server/.env` and set `SECRET_KEY` and `DATABASE_URL`.
 
-The API geocodes the address of each registration request with the [Géoplateforme](https://data.geopf.fr/geocodage) of the IGN (free, no key): it needs outbound internet access. Override the service with `GEOCODING_URL` and `GEOCODING_TIMEOUT_SECONDS` (default 5). The tests use a fake geocoder and never call it.
+A registration request sent without address gets the address of its SIRET or RNA number from the Sirene base, through the [API Recherche d'entreprises](https://recherche-entreprises.api.gouv.fr) (free, no key; associations with an RNA number only are not in it and must give their address). The address is then geocoded with the [Géoplateforme](https://data.geopf.fr/geocodage) of the IGN (free, no key). The API needs outbound internet access; override the services with `COMPANY_REGISTRY_URL`, `GEOCODING_URL` and `COMPANY_REGISTRY_TIMEOUT_SECONDS` (default 10 s), `GEOCODING_TIMEOUT_SECONDS` (default 5 s). The tests use fakes and never call them.
 
 Copy `apps/web/.env.example` to `apps/web/.env`. `VITE_API_URL` is the base URL of the API contract: `http://127.0.0.1:4010` is Prism, either the mock (`pnpm mock`) or the validation proxy in front of the API (see [Web app on the real API](#web-app-on-the-real-api)). The web app refuses to start without it.
 

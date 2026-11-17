@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     geocoding_url: str = "https://data.geopf.fr/geocodage"
     geocoding_timeout_seconds: float = 5
 
+    # Address of the SIRET or RNA number of a registration sent without address
+    # (API Recherche d'entreprises, no key needed)
+    company_registry_url: str = "https://recherche-entreprises.api.gouv.fr"
+    company_registry_timeout_seconds: float = 10
+
 
 @lru_cache
 def get_settings() -> Settings:

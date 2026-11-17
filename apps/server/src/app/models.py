@@ -144,7 +144,8 @@ class RegistrationRequest(Base):
     supplier_type: Mapped[SupplierType | None] = mapped_column(
         _str_enum(SupplierType, "supplier_type")
     )
-    # Address: optional at registration, asked later.
+    # Address given or found from the SIRET / RNA number at registration (null only for
+    # requests sent before that lookup existed).
     street: Mapped[str | None] = mapped_column(String(255))
     postal_code: Mapped[str | None] = mapped_column(String(5))
     city: Mapped[str | None] = mapped_column(String(120))
