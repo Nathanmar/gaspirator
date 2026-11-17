@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     )
 
     # Application settings
-    app_name: str = "gaspirator"
+    app_name: str = "Gaspirator"
     debug: bool = False
     host: str = "0.0.0.0"
     port: int = 8000
@@ -40,6 +40,15 @@ class Settings(BaseSettings):
     smtp_host: str | None = None
     smtp_port: int = 1025
     mail_from: str = "Gaspirator <noreply@gaspirator.fr>"
+
+    # Geocoding of the registration addresses (Géoplateforme of the IGN, no key needed)
+    geocoding_url: str = "https://data.geopf.fr/geocodage"
+    geocoding_timeout_seconds: float = 5
+
+    # Address of the SIRET or RNA number of a registration sent without address
+    # (API Recherche d'entreprises, no key needed)
+    company_registry_url: str = "https://recherche-entreprises.api.gouv.fr"
+    company_registry_timeout_seconds: float = 10
 
 
 @lru_cache

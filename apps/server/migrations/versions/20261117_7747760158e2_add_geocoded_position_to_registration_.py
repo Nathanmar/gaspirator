@@ -1,11 +1,10 @@
-"""Add the geocoded position (latitude, longitude) to registration requests.
+"""Add geocoded position to registration requests.
 
-The contract geocodes the address on submission; the position is copied to the supplier
-or association `location` when an admin approves the request.
+Nullable: the requests sent before geocoding existed have no position.
 
-Revision ID: 5b1f3c2a9d47
+Revision ID: 7747760158e2
 Revises: 3b1f0c2a9d47
-Create Date: 2026-11-17 10:00:00.000000
+Create Date: 2026-11-17 11:01:27.130024
 
 """
 
@@ -15,7 +14,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "5b1f3c2a9d47"
+revision: str = "7747760158e2"
 down_revision: str | Sequence[str] | None = "3b1f0c2a9d47"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

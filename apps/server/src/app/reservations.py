@@ -191,7 +191,7 @@ def create_reservation(
         raise not_found("Lot introuvable.")
     now = datetime.now(UTC)
     status = lot_status(lot, now)
-    if status == LotStatus.RESERVED:
+    if status in (LotStatus.RESERVED, LotStatus.COLLECTED):
         raise conflict("Ce lot a déjà été entièrement réservé.")
     if status != LotStatus.AVAILABLE:
         raise conflict("Ce lot n'est plus disponible : son créneau ou sa DLC est passé.")

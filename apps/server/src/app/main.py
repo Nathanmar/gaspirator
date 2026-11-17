@@ -28,7 +28,7 @@ settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
-    description="A Python API built with Better Fullstack",
+    description="A platform that connects food suppliers (canteens, hospitals, supermarkets…) with charities, so surplus food is donated instead of thrown away.",
     version="0.1.0",
     lifespan=lifespan,
 )

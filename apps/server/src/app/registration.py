@@ -9,13 +9,17 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.auth import hash_password
+from app.company_registry import CompanyRegistry, RegistryUnavailable, get_company_registry
 from app.db import get_session
-from app.errors import ApiError
+from app.errors import ApiError, invalid_fields, service_unavailable
+from app.geocoding import Geocoder, GeocodingUnavailable, get_geocoder
 from app.schemas import (
     AccountSummary,
     Address,
     AssociationCreate,
     Error,
+    ErrorDetail,
+    GeoPoint,
     OrganizationType,
     RegistrationRequest,
     RegistrationRequestCreate,
@@ -28,6 +32,50 @@ router = APIRouter(tags=["Registration"])
 
 _EMAIL_USED = "Cette adresse e-mail est déjà utilisée."
 _LEGAL_ID_USED = "Ce SIRET ou ce n° RNA est déjà utilisé."
+_ADDRESS_NOT_FOUND = "adresse introuvable"
+_NOT_IN_REGISTRY = {
+    "supplier": "obligatoire : introuvable à partir du SIRET",
+    "association": "obligatoire : introuvable à partir du n° RNA",
+}
+# Seconds to wait when the geocoding service or the company registry is unavailable.
+SERVICE_RETRY_AFTER = 60
+
+
+def _address_not_found(section: str, message: str) -> ApiError:
+    return invalid_fields([ErrorDetail(field=f"{section}.address", message=message)])
+
+
+def _registry_address(registry: CompanyRegistry, section: str, legal_id: str) -> Address:
+    """Address of the SIRET or RNA number in the Sirene base; 422 if none, 503 if the
+    registry is unavailable."""
+    try:
+        if section == "supplier":
+            address = registry.supplier_address(legal_id)
+        else:
+            address = registry.association_address(legal_id)
+    except RegistryUnavailable as exc:
+        raise service_unavailable(
+            "Le service de recherche des entreprises est indisponible, réessayez plus tard ou "
+            "saisissez l'adresse.",
+            retry_after=SERVICE_RETRY_AFTER,
+        ) from exc
+    if address is None:
+        raise _address_not_found(section, _NOT_IN_REGISTRY[section])
+    return address
+
+
+def _geocode(geocoder: Geocoder, section: str, address: Address) -> GeoPoint:
+    """Position of the address; 422 if it cannot be found, 503 if geocoding is unavailable."""
+    try:
+        position = geocoder.geocode(address)
+    except GeocodingUnavailable as exc:
+        raise service_unavailable(
+            "Le service de géolocalisation des adresses est indisponible, réessayez plus tard.",
+            retry_after=SERVICE_RETRY_AFTER,
+        ) from exc
+    if position is None:
+        raise _address_not_found(section, _ADDRESS_NOT_FOUND)
+    return position
 
 
 def to_schema(request: models.RegistrationRequest) -> RegistrationRequest:
@@ -89,17 +137,35 @@ def _conflict_message(session: Session, email: str, legal_id: str) -> str | None
     status_code=201,
     response_model=RegistrationRequest,
     operation_id="createRegistrationRequest",
-    responses={409: {"model": Error, "description": "SIRET, n° RNA ou e-mail déjà utilisé"}},
+    responses={
+        400: {"model": Error},
+        409: {"model": Error, "description": "SIRET, n° RNA ou e-mail déjà utilisé"},
+        422: {"model": Error, "description": "Champ mal formé ou adresse introuvable"},
+        503: {
+            "model": Error,
+            "description": "Géolocalisation ou recherche d'entreprises indisponible (hors contrat)",
+        },
+    },
 )
 def create_registration_request(
-    payload: RegistrationRequestCreate, session: Annotated[Session, Depends(get_session)]
+    payload: RegistrationRequestCreate,
+    session: Annotated[Session, Depends(get_session)],
+    geocoder: Annotated[Geocoder, Depends(get_geocoder)],
+    registry: Annotated[CompanyRegistry, Depends(get_company_registry)],
 ) -> RegistrationRequest:
-    """Create a `pending` registration request for a supplier or an association."""
+    """Create a `pending` registration request for a supplier or an association.
+
+    Without address, it is found from the SIRET or the RNA number in the Sirene base. The
+    address is geocoded (422 if it cannot be found)."""
     applicant: SupplierCreate | AssociationCreate = payload.supplier or payload.association
+    section = "supplier" if payload.supplier else "association"
     account = payload.account
     conflict = _conflict_message(session, account.email, applicant.legal_id)
     if conflict is not None:
         raise ApiError(409, "conflict", conflict)
+
+    address = applicant.address or _registry_address(registry, section, applicant.legal_id)
+    position = _geocode(geocoder, section, address)
 
     user = models.User(
         email=account.email,
@@ -117,9 +183,11 @@ def create_registration_request(
         organization_name=applicant.name,
         legal_id=applicant.legal_id,
         supplier_type=payload.supplier.supplier_type if payload.supplier else None,
-        street=applicant.address.street if applicant.address else None,
-        postal_code=applicant.address.postal_code if applicant.address else None,
-        city=applicant.address.city if applicant.address else None,
+        street=address.street,
+        postal_code=address.postal_code,
+        city=address.city,
+        latitude=position.latitude,
+        longitude=position.longitude,
         contact_phone=applicant.contact_phone,
     )
     session.add(request)
