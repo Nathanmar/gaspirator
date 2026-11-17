@@ -1,0 +1,30 @@
+name: CodeQL
+
+# Template called by ci.yml, once per language that changed.
+on:
+  workflow_call:
+    inputs:
+      language:
+        description: CodeQL language (javascript-typescript, python, actions)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: CodeQL (${{ inputs.language }})
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ inputs.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ inputs.language }}

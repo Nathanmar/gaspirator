@@ -1,0 +1,60 @@
+name: Image CI
+
+# Template called by ci.yml: builds one Docker image and scans it with Trivy.
+on:
+  workflow_call:
+    inputs:
+      name:
+        description: Image name (web, server)
+        required: true
+        type: string
+      context:
+        description: Docker build context
+        required: true
+        type: string
+      dockerfile:
+        description: Path to the Dockerfile
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    name: Build & scan image (${{ inputs.name }})
+    runs-on: ubuntu-26.04
+    env:
+      IMAGE_TAR: /tmp/gaspirator-${{ inputs.name }}.tar
+      REPORT: /tmp/trivy-${{ inputs.name }}.txt
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          tags: gaspirator-${{ inputs.name }}:${{ github.sha }}
+          outputs: type=docker,dest=${{ env.IMAGE_TAR }}
+          cache-from: type=gha,scope=${{ inputs.name }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.name }}
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          version: v0.76.2
+          input: ${{ env.IMAGE_TAR }}
+          format: table
+          output: ${{ env.REPORT }}
+          exit-code: "0"
+
+      - name: Add report to job summary
+        run: |
+          {
+            echo "### Trivy report: ${{ inputs.name }}"
+            echo '```'
+            cat "$REPORT"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

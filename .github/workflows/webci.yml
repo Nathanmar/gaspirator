@@ -1,0 +1,54 @@
+name: Web CI
+
+# Template called by ci.yml when apps/web, apps/mobile or the JS workspace change.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Lint, Type Check & Build
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # Biome --changed compares with origin/develop
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Biome
+        run: pnpm exec biome ci --changed --since=origin/develop --no-errors-on-unmatched
+
+      - name: Type check
+        run: pnpm run check-types
+
+      - name: Build
+        run: pnpm run build
+
+  audit-web:
+    name: CVE audit (web / TanStack)
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # Report only for now: findings never fail the pipeline, whatever the severity.
+      - name: pnpm audit
+        continue-on-error: true
+        run: pnpm audit
