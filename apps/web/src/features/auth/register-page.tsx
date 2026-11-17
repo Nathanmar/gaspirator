@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { Link } from "@tanstack/react-router";
 
 import { ArrowBadge, primaryButtonClass } from "@/components/form-controls";
-import { errorMessage } from "@/lib/api-client";
+import { ApiError, errorMessage } from "@/lib/api-client";
 
 import {
   type OrganizationType,
@@ -13,17 +13,58 @@ import {
 import { AuthLayout } from "./auth-layout";
 import { RegisterForm } from "./register-form";
 
-// Our own texts for 409 and 422, independent of the server message (the mock server returns the
-// same example body for every error).
-const REGISTER_ERRORS = {
-  409: "Un compte existe déjà avec cette adresse e-mail, ce SIRET ou ce n° RNA.",
-  // The form already checks every format: a 422 mostly means the address was not found.
-  422: "Certaines informations ont été refusées. Vérifiez notamment que l'adresse existe.",
+// Field paths of a 422 (`account.email`, `supplier.address.city`…), as labelled in the form. The
+// fields shared by suppliers and associations are listed without their prefix.
+const FIELD_LABELS: Record<string, string> = {
+  "account.firstname": "Prénom",
+  "account.lastname": "Nom",
+  "account.email": "E-mail",
+  "account.password": "Mot de passe",
+  "supplier.legal_id": "SIRET",
+  "association.legal_id": "N° RNA",
+  "supplier.supplier_type": "Type d'établissement",
+  name: "Nom de l'organisation",
+  address: "Adresse",
+  "address.street": "Adresse",
+  "address.postal_code": "Code postal",
+  "address.city": "Ville",
+  contact_phone: "Téléphone",
 };
+
+function fieldLabel(field: string): string {
+  const shared = field.replace(/^(supplier|association)\./, "");
+  return FIELD_LABELS[field] ?? FIELD_LABELS[shared] ?? field;
+}
+
+/**
+ * Error shown for a failed registration. The API's messages are shown as is (409 tells whether
+ * the e-mail or the SIRET / RNA number is already used); a 422 lists the refused fields, which the
+ * form could not catch itself (e.g. an e-mail domain or an address the server rejects).
+ */
+function registerError(failure: unknown): ReactNode {
+  if (failure instanceof ApiError && failure.status === 422 && failure.details.length > 0) {
+    return (
+      <>
+        {/* Non-breaking spaces before the colons, as French typography wants. */}
+        Certaines informations ont été refusées&nbsp;:
+        <ul className="mt-1 list-disc pl-5">
+          {failure.details.map((detail, index) => (
+            <li key={`${detail.field}-${index}`}>
+              {fieldLabel(detail.field)}&nbsp;: {detail.message}
+            </li>
+          ))}
+        </ul>
+      </>
+    );
+  }
+  return errorMessage(failure, {
+    422: "Certaines informations ont été refusées. Vérifiez le formulaire.",
+  });
+}
 
 type SentRequest = { role: OrganizationType; name: string; email: string };
 
-// The confirmation repeats what was sent rather than reading the response: the mock server answers
+// The confirmation repeats what was sent rather than reading the response: the Prism mock answers
 // every request with the same fixed example.
 function summarize(payload: RegistrationRequestCreate): SentRequest {
   const role = "supplier" in payload ? "supplier" : "association";
@@ -32,7 +73,7 @@ function summarize(payload: RegistrationRequestCreate): SentRequest {
 }
 
 export function RegisterPage({ role }: { role?: OrganizationType }) {
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ReactNode>(null);
   const [sent, setSent] = useState<SentRequest | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
@@ -47,7 +88,7 @@ export function RegisterPage({ role }: { role?: OrganizationType }) {
       await createRegistrationRequest(payload);
       setSent(summarize(payload));
     } catch (failure) {
-      setError(errorMessage(failure, REGISTER_ERRORS));
+      setError(registerError(failure));
     }
   }
 
@@ -60,7 +101,7 @@ export function RegisterPage({ role }: { role?: OrganizationType }) {
         description="Merci ! Votre demande est en attente de validation."
       >
         <div className="flex flex-col gap-6">
-          <p className="leading-snug">
+          <p className="leading-snug wrap-anywhere">
             Un administrateur va vérifier les informations de{" "}
             <strong>{sent.name}</strong>. Vous pourrez vous connecter avec{" "}
             <strong>{sent.email}</strong> dès que la demande sera acceptée.

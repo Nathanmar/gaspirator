@@ -89,3 +89,15 @@ export function createRegistrationRequest(
     body: request,
   });
 }
+
+/**
+ * `POST /auth/logout`: revokes the refresh token on the server. The route is authenticated, hence
+ * the access token.
+ */
+export function logout(tokens: AuthTokens): Promise<void> {
+  return apiRequest<void>("/auth/logout", {
+    method: "POST",
+    body: { refresh_token: tokens.refresh_token },
+    accessToken: tokens.access_token,
+  });
+}

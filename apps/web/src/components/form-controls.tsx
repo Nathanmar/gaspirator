@@ -189,15 +189,18 @@ export function ArrowBadge({ pending = false }: { pending?: boolean }) {
   );
 }
 
-/** Error of the whole form (wrong credentials, server unreachable…), announced when it appears. */
+/**
+ * Error of the whole form (wrong credentials, server unreachable…), announced when it appears.
+ * The content may hold a list, hence a `div` rather than a paragraph.
+ */
 export function FormAlert({ children }: { children: ReactNode }) {
   return (
-    <p
+    <div
       role="alert"
       className="flex gap-3 rounded-2xl border border-tomato/30 bg-tomato/10 px-4 py-3 text-sm leading-snug font-medium text-cream"
     >
       <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-tomato" />
-      {children}
-    </p>
+      <div>{children}</div>
+    </div>
   );
 }

@@ -157,8 +157,10 @@ describe("RegisterPage", () => {
     expect(sentBody(fetchMock)).toEqual(associationRegistration);
   });
 
-  it("explains that the e-mail, SIRET or RNA number is already used (409)", async () => {
-    mockFetch(jsonResponse(409, { code: "conflict", message: "Conflit." }));
+  it("shows the server's explanation of what is already used (409)", async () => {
+    mockFetch(
+      jsonResponse(409, { code: "conflict", message: "Ce SIRET ou ce n° RNA est déjà utilisé." }),
+    );
     renderWithRouter(<RegisterPage role="supplier" />, { path: "/register" });
 
     await fillAccountStep();
@@ -166,8 +168,31 @@ describe("RegisterPage", () => {
     await submit();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Un compte existe déjà avec cette adresse e-mail, ce SIRET ou ce n° RNA.",
+      "Ce SIRET ou ce n° RNA est déjà utilisé.",
     );
+  });
+
+  it("lists the fields refused by the server (422)", async () => {
+    mockFetch(
+      jsonResponse(422, {
+        code: "validation_error",
+        message: "Certains champs sont invalides.",
+        details: [
+          { field: "account.email", message: "adresse e-mail invalide" },
+          { field: "supplier.address", message: "adresse introuvable" },
+        ],
+      }),
+    );
+    renderWithRouter(<RegisterPage role="supplier" />, { path: "/register" });
+
+    await fillAccountStep();
+    await fillSupplierStep();
+    await submit();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Certaines informations ont été refusées");
+    expect(alert).toHaveTextContent("E-mail : adresse e-mail invalide");
+    expect(alert).toHaveTextContent("Adresse : adresse introuvable");
   });
 
   it("tells the user when the server cannot be reached", async () => {
