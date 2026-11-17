@@ -42,11 +42,15 @@ paths:
             summary: Envoyer une demande d'inscription
             description: |
                 US-01. Crée une demande au statut `pending` pour un fournisseur ou une association et le compte
-                de son responsable. L'adresse est géocodée à l'envoi. Le compte ne peut pas se
-                connecter tant que la demande n'est pas acceptée par un admin.
+                de son responsable. L'adresse est facultative : si elle n'est pas envoyée, elle
+                est retrouvée à partir du SIRET (fournisseur) ou du n° RNA (association) dans la
+                base Sirene, puis renvoyée dans la demande. Dans tous les cas, elle est géocodée à
+                l'envoi. Le compte ne peut pas se connecter tant que la demande n'est pas
+                acceptée par un admin.
 
                 409 si le SIRET, le n° RNA ou l'e-mail est déjà utilisé. 422 si un champ est
-                mal formé ou si l'adresse est introuvable.
+                mal formé ou si l'adresse est introuvable (y compris à partir du SIRET ou du
+                n° RNA : elle doit alors être envoyée).
             operationId: createRegistrationRequest
             security: []
             requestBody:
@@ -604,7 +608,7 @@ components:
                     example: "19690103400017"
                 supplier_type: { $ref: "#/components/schemas/SupplierType" }
                 address:
-                    description: Facultative à l'inscription, demandée plus tard
+                    description: Facultative ; si absente, retrouvée à partir du SIRET ou du n° RNA
                     nullable: true
                     anyOf:
                         - $ref: "#/components/schemas/Address"
@@ -661,7 +665,7 @@ components:
                     pattern: '^W\d{9}$'
                     example: "W691234567"
                 address:
-                    description: Facultative à l'inscription, demandée plus tard
+                    description: Facultative ; si absente, retrouvée à partir du SIRET ou du n° RNA
                     nullable: true
                     anyOf:
                         - $ref: "#/components/schemas/Address"
