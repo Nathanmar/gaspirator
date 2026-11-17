@@ -23,6 +23,7 @@ apps/web/
     ├── fixtures/                         # données de test partagées, typées avec le contrat
     ├── components/
     │   ├── loader.test.tsx
+    │   ├── space-layout.test.tsx
     │   └── landing/hud.test.tsx
     ├── lib/
     │   └── format.test.ts
@@ -30,7 +31,10 @@ apps/web/
         ├── association/
         │   ├── association-api.test.ts
         │   ├── association-home.test.tsx
-        │   └── association-loader.test.ts
+        │   ├── association-loader.test.ts
+        │   ├── history-page.test.tsx
+        │   ├── reservation-page.test.tsx
+        │   └── suppliers-map.test.tsx
         └── auth/
             ├── auth-api.test.ts
             ├── auth-guard.test.ts
@@ -290,40 +294,84 @@ Appel d'une route réservée aux utilisateurs connectés. Le token d'accès dure
 | Responsable d'une association | `homePath` vaut `/association` |
 | Fournisseur, admin | `homePath` vaut `/` (pas encore d'espace) |
 
-### `searchSuppliers` et `listMyReservations` — `src/features/association/association-api.ts`
+### `searchSuppliers`, `listMyReservations` et `getReservation` — `src/features/association/association-api.ts`
 
 | Cas | Résultat attendu |
 | --- | ---------------- |
 | `searchSuppliers({ radius_km: 25 })` | `GET /suppliers?radius_km=25` avec le token ; sans latitude ni longitude, l'API cherche autour de l'association |
 | `listMyReservations()` | `GET /me/reservations` |
+| `listMyReservations({ per_page: 100 })` | `GET /me/reservations?per_page=100` |
+| `getReservation(3)` | `GET /reservations/3`, avec le code de collecte |
 
-### `loadAssociationHome` et `associationSearchSchema` — `src/features/association/association-loader.ts`
+### Loaders de l'espace association — `src/features/association/association-loader.ts`
 
-Loader de la route `/association`.
+L'espace est une route de mise en page (`routes/association/route.tsx`) : son `beforeLoad` vérifie la session et l'association avant les pages. Chaque page charge ensuite ses propres données.
 
 | Cas | Résultat attendu |
 | --- | ---------------- |
-| Responsable d'une association | `GET /me`, puis réservations et fournisseurs en parallèle |
-| Compte sans association | Redirection vers `/`, aucune autre requête |
-| Session expirée | Message « Votre session a expiré. Reconnectez-vous. », redirection vers `/login?role=association` |
+| `loadAssociationAccount`, responsable d'une association | `GET /me`, renvoie le prénom et l'association |
+| `loadAssociationAccount`, compte sans association | Redirection vers `/` |
+| Session expirée (n'importe quel loader) | Un seul message « Votre session a expiré. Reconnectez-vous. », redirection vers `/login?role=association` |
+| `loadAssociationHome(25)` | Réservations et fournisseurs à 25 km, en parallèle |
+| `loadReservationHistory` | `GET /me/reservations?per_page=100` (le maximum d'une page) |
+| `loadReservation(3)` | `GET /reservations/3` |
 | `?radius_km=25` | Gardé |
 | Autre rayon (`7`, `loin`) | Ignoré : rayon par défaut (10 km) |
 
 ### `AssociationHome` — `src/features/association/association-home.tsx`
 
-Page vue par une association une fois connectée.
+Accueil de l'espace association (`/association`).
 
 | Cas | Résultat attendu |
 | --- | ---------------- |
 | Accueil | « Bonjour Marie » et le nom de l'association |
 | Collectes à venir | Réservations `booked`, la plus proche d'abord |
-| Contenu d'une collecte | Lot, quantité (« 12 portions »), conservation (« Réfrigéré »), fournisseur et adresse, heure de passage à l'heure de Lyon, code de collecte (« 482 913 ») |
-| Réservations collectées | Liste « Déjà collectées », sans le code |
+| Contenu d'une collecte | Lot, quantité, conservation, fournisseur, plage de passage du lot (« mar. 3 nov., entre 14:00 et 16:00 ») |
+| Code de collecte | Absent de l'accueil : toute la carte mène à `/association/reservations/{id}` |
+| Réservations collectées | Absentes de l'accueil : lien « Historique des collectes » vers `/association/history` |
 | Aucune collecte | « Aucune collecte prévue pour l'instant. » |
-| Fournisseurs autour | Dans l'ordre de l'API (le plus proche d'abord) : type, nom, distance (« 350 m », « 4,3 km »), nombre de lots, adresse |
-| Téléphone d'un fournisseur | Lien `tel:` |
+| Fournisseurs autour | Dans l'ordre de l'API (le plus proche d'abord) : type, nom, distance (« 350 m », « 4,3 km »), nombre de lots, adresse, lien `tel:` |
+| « Liste » / « Carte » | Change de vue sur la même page (`aria-pressed`) |
 | Rayon de recherche | Liens 5, 10, 25 et 50 km ; le rayon actuel porte `aria-current="page"` |
 | Aucun fournisseur | « Aucun fournisseur n'a de lot disponible à moins de 10 km. » et un lien vers le rayon suivant (pas à 50 km) |
+
+### `SuppliersMap` — `src/features/association/suppliers-map.tsx`
+
+Vue « Carte » : l'association au centre, chaque fournisseur dans sa vraie direction, à l'échelle du rayon. Elle tient la place de la future carte interactive (Google Maps), avec les mêmes entrées.
+
+| Cas | Résultat attendu |
+| --- | ---------------- |
+| Centre | « Vous » |
+| Placement | Un fournisseur au nord est au-dessus du centre, un fournisseur au sud-est en dessous à droite |
+| Sélection | Le plus proche d'abord ; toucher un point affiche sa fiche (`aria-pressed`, lien `tel:`) |
+
+### `ReservationPage` — `src/features/association/reservation-page.tsx`
+
+Page d'une collecte (`/association/reservations/{id}`), à ouvrir en allant chercher le lot.
+
+| Cas | Résultat attendu |
+| --- | ---------------- |
+| Lot | Titre, quantité, conservation, « À consommer jusqu'au mer. 4 nov. » |
+| Collecte à venir | Code en grand (« 482 913 ») et « Montrez ce code au fournisseur » |
+| Où et quand | Plage de passage, fournisseur et adresse |
+| Itinéraire | Lien Google Maps vers la position du fournisseur, dans un nouvel onglet |
+| Téléphone | Lien `tel:` |
+| Retour | « Mes collectes » mène à `/association` |
+| Collecte terminée | « Collectée le … », ni code ni itinéraire |
+
+### `HistoryPage` — `src/features/association/history-page.tsx`
+
+| Cas | Résultat attendu |
+| --- | ---------------- |
+| Liste | Réservations collectées seulement, la plus récente d'abord, avec la date de collecte |
+| Aucune | « Aucune collecte terminée pour l'instant. » |
+| Retour | « Mon espace » mène à `/association` |
+
+### `SpaceLayout` — `src/components/space-layout.tsx`
+
+| Cas | Résultat attendu |
+| --- | ---------------- |
+| Affichage | La page de l'espace sous l'en-tête |
 | « Se déconnecter » | Tokens oubliés, retour à `/` |
 
 ### Formats — `src/lib/format.ts`
@@ -334,6 +382,8 @@ Page vue par une association une fois connectée.
 | Autre distance | En km, une décimale (« 4,3 km ») |
 | Quantité | Unité en français (« 12 portions », « 3,5 kg », « 24 pièces ») ; singulier pour 1 |
 | Date et heure | Heure de Lyon, quel que soit le fuseau de l'appareil (« mar. 3 nov. à 15:15 », heure d'été comprise) |
+| Plage de passage | « mar. 3 nov., entre 14:00 et 16:00 » ; une seule heure si début = fin ; les deux jours si elle passe minuit |
+| Date seule (DLC) | « mer. 4 nov. », sans décalage de fuseau |
 | Code de collecte | Deux groupes de trois chiffres (« 482 913 ») |
 
 ### `Hud` — `src/components/landing/hud.tsx`
