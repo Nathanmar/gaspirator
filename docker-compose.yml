@@ -33,6 +33,8 @@ services:
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-gaspirator}
       - SMTP_HOST=mailpit
       - SMTP_PORT=1025
+      # Development data (suppliers, associations, lots), inserted once on an empty database.
+      - SEED_DEV_DATA=true
     depends_on:
       db:
         condition: service_healthy
