@@ -71,6 +71,7 @@ _BAD_REQUEST_ON_VALIDATION = {"refreshToken", "logout", "listMyLots", "listMyRes
 _NOT_FOUND_ON_VALIDATION = {
     "getLot": "Lot introuvable.",
     "listLotReservations": "Lot introuvable.",
+    "getReservation": "Réservation introuvable.",
 }
 
 # Operations with a body (422 for its fields) whose contract also has a 400: an invalid

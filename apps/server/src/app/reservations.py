@@ -1,12 +1,12 @@
 """US-04: reservations of lots by the associations
-(/lots/{lotId}/reservations, /me/reservations)."""
+(/lots/{lotId}/reservations, /me/reservations, /reservations/{reservationId})."""
 
 import secrets
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy import func, select
 
 from app import models
@@ -16,6 +16,7 @@ from app.lots import (
     CurrentSupplier,
     DbSession,
     LotId,
+    get_lot_reader,
     lot_status,
     supplier_summary,
 )
@@ -38,6 +39,9 @@ from app.schemas import (
 router = APIRouter(tags=["Reservations"])
 
 CurrentAssociation = Annotated[models.Association, Depends(get_current_association)]
+
+# Path parameters of the contract are int64.
+ReservationId = Annotated[int, Path(alias="reservationId", ge=1, le=2**63 - 1)]
 
 
 def _errors(*status_codes: int) -> dict[int | str, dict]:
@@ -237,3 +241,28 @@ def list_my_reservations(
         data=[to_schema(reservation, with_pickup_code=True) for reservation in reservations],
         meta=PageMeta(page=page, per_page=per_page, total=total),
     )
+
+
+@router.get(
+    "/reservations/{reservationId}",
+    response_model=Reservation,
+    operation_id="getReservation",
+    responses=_errors(401, 403, 404),
+)
+def get_reservation(
+    reservation_id: ReservationId,
+    user: Annotated[models.User, Depends(get_lot_reader)],
+    session: DbSession,
+) -> Reservation:
+    """A reservation, for the association that made it (with the pickup code) or for the
+    supplier of the lot (without it)."""
+    reservation = session.get(models.Reservation, reservation_id)
+    if reservation is None:
+        raise not_found("Réservation introuvable.")
+    if user.association_id is not None:
+        if reservation.association_id != user.association_id:
+            raise forbidden("Cette réservation a été faite par une autre association.")
+        return to_schema(reservation, with_pickup_code=True)
+    if reservation.lot.supplier_id != user.supplier_id:
+        raise forbidden("Cette réservation porte sur le lot d'un autre fournisseur.")
+    return to_schema(reservation, with_pickup_code=False)
