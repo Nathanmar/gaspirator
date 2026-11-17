@@ -12,7 +12,7 @@ import {
 import { AuthLayout } from "./auth-layout";
 import { RegisterForm } from "./register-form";
 
-// Field paths of a 422 (`account.email`, `supplier.address.city`…), as labelled in the form. The
+// Field paths of a 422 (`account.email`, `supplier.contact_phone`…), as labelled in the form. The
 // fields shared by suppliers and associations are listed without their prefix.
 const FIELD_LABELS: Record<string, string> = {
 	"account.firstname": "Prénom",
@@ -23,10 +23,6 @@ const FIELD_LABELS: Record<string, string> = {
 	"association.legal_id": "N° RNA",
 	"supplier.supplier_type": "Type d'établissement",
 	name: "Nom de l'organisation",
-	address: "Adresse",
-	"address.street": "Adresse",
-	"address.postal_code": "Code postal",
-	"address.city": "Ville",
 	contact_phone: "Téléphone",
 };
 
@@ -38,7 +34,7 @@ function fieldLabel(field: string): string {
 /**
  * Error shown for a failed registration. The API's messages are shown as is (409 tells whether
  * the e-mail or the SIRET / RNA number is already used); a 422 lists the refused fields, which the
- * form could not catch itself (e.g. an e-mail domain or an address the server rejects).
+ * form could not catch itself (e.g. an e-mail domain or a phone number the server rejects).
  */
 function registerError(failure: unknown): ReactNode {
 	if (
@@ -99,6 +95,28 @@ export function RegisterPage({ role }: { role?: OrganizationType }) {
 	if (sent) {
 		return (
 			<AuthLayout
+				centered
+				mark={
+					<div aria-hidden="true" className="relative mx-auto mb-6 size-16">
+						<span className="success-ring absolute inset-0 rounded-full border-2 border-lime opacity-0" />
+						<svg
+							aria-hidden="true"
+							viewBox="0 0 24 24"
+							className="success-pop size-16 rounded-full bg-lime p-4 text-ink"
+						>
+							<path
+								className="success-check"
+								d="M5 12.5l4.5 4.5L19 7.5"
+								pathLength={1}
+								fill="none"
+								stroke="currentColor"
+								strokeWidth={3}
+								strokeLinecap="round"
+								strokeLinejoin="round"
+							/>
+						</svg>
+					</div>
+				}
 				eyebrow="Inscription"
 				title="Demande envoyée"
 				titleRef={titleRef}

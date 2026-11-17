@@ -172,14 +172,15 @@ class SupplierCreate(StrictModel):
     name: str = Field(min_length=2, max_length=255)
     legal_id: str = Field(pattern=r"^\d{14}$", description="SIRET (14 chiffres)")
     supplier_type: SupplierType
-    address: Address
+    # Optional at registration, asked later.
+    address: Address | None = None
     contact_phone: str = Field(min_length=10, max_length=20)
 
 
 class AssociationCreate(StrictModel):
     name: str = Field(min_length=2, max_length=255)
     legal_id: str = Field(pattern=r"^W\d{9}$", description="N° RNA (W suivi de 9 chiffres)")
-    address: Address
+    address: Address | None = None
     contact_phone: str = Field(min_length=10, max_length=20)
 
 

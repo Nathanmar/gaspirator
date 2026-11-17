@@ -72,6 +72,19 @@ def test_register_supplier(api: httpx2.Client, registration: dict, db: Session):
     assert request.user.password_hash != "testPass1."
 
 
+def test_register_without_address(api: httpx2.Client, registration: dict, db: Session):
+    # The address is asked later, not at registration.
+    del registration["supplier"]["address"]
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
+    assert_contract(response)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["supplier"]["address"] is None
+    assert db.get(RegistrationRequest, data["id"]).street is None
+
+
 def test_register_association(api: httpx2.Client, association_registration: dict):
     response = api.post(REGISTRATION_PATH, json=association_registration)
 
@@ -258,7 +271,7 @@ def test_register_missing_account_field(api: httpx2.Client, registration: dict, 
     _assert_validation_error(response, f"account.{field}")
 
 
-@pytest.mark.parametrize("field", ["name", "legal_id", "supplier_type", "address", "contact_phone"])
+@pytest.mark.parametrize("field", ["name", "legal_id", "supplier_type", "contact_phone"])
 def test_register_missing_supplier_field(api: httpx2.Client, registration: dict, field: str):
     del registration["supplier"][field]
 

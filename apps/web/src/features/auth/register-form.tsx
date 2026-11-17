@@ -64,7 +64,6 @@ function emptyValues(type: OrganizationType | ""): RegisterFormValues {
 			name: "",
 			legal_id: "",
 			supplier_type: "",
-			address: { street: "", postal_code: "", city: "" },
 			contact_phone: "",
 		},
 	};
@@ -324,41 +323,6 @@ function OrganizationStep({
 							label="Téléphone"
 							type="tel"
 							autoComplete="tel"
-						/>
-					)}
-				</form.Field>
-			</div>
-
-			<form.Field name="address.street">
-				{(field) => (
-					<BoundTextField
-						field={field}
-						idPrefix="organization"
-						label="Adresse"
-						autoComplete="address-line1"
-					/>
-				)}
-			</form.Field>
-
-			<div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
-				<form.Field name="address.postal_code">
-					{(field) => (
-						<BoundTextField
-							field={field}
-							idPrefix="organization"
-							label="Code postal"
-							autoComplete="postal-code"
-							inputMode="numeric"
-						/>
-					)}
-				</form.Field>
-				<form.Field name="address.city">
-					{(field) => (
-						<BoundTextField
-							field={field}
-							idPrefix="organization"
-							label="Ville"
-							autoComplete="address-level2"
 						/>
 					)}
 				</form.Field>

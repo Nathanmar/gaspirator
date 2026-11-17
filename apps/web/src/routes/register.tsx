@@ -7,7 +7,7 @@ import { RegisterPage } from "@/features/auth/register-page";
 export const Route = createFileRoute("/register")({
 	validateSearch: authSearchSchema,
 	beforeLoad: redirectIfLoggedIn,
-	head: () => ({ meta: [{ title: "Inscription — Gaspirator" }] }),
+	head: () => ({ meta: [{ title: "Inscription - Gaspirator" }] }),
 	component: RegisterRoute,
 });
 
