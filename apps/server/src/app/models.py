@@ -15,6 +15,7 @@ from sqlalchemy import (
     Index,
     Numeric,
     String,
+    UniqueConstraint,
     func,
     text,
 )
@@ -27,6 +28,7 @@ from app.schemas import (
     OrganizationType,
     QuantityUnit,
     RegistrationStatus,
+    ReservationStatus,
     Storage,
     SupplierType,
     UserRole,
@@ -209,3 +211,37 @@ class Lot(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     supplier: Mapped[Supplier] = relationship(lazy="joined")
+
+
+class Reservation(Base):
+    """A quantity of a lot reserved by an association (US-04), collected with its pickup
+    code (US-05). Its quantity is taken off `Lot.remaining_quantity`."""
+
+    __tablename__ = "reservations"
+    __table_args__ = (
+        CheckConstraint("quantity > 0", name="quantity_positive"),
+        # Only a collected reservation has a collection time.
+        CheckConstraint(
+            "(status = 'collected') = (collected_at IS NOT NULL)", name="collected_at_if_collected"
+        ),
+        # The supplier tells the reservations of a lot apart by their pickup code.
+        UniqueConstraint("lot_id", "pickup_code", name="uq_reservations_lot_id_pickup_code"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    # Indexed by the unique constraint (lot_id, pickup_code).
+    lot_id: Mapped[int] = mapped_column(ForeignKey("lots.id", ondelete="CASCADE"))
+    association_id: Mapped[int] = mapped_column(
+        ForeignKey("associations.id", ondelete="CASCADE"), index=True
+    )
+    quantity: Mapped[Decimal] = mapped_column(Quantity)
+    pickup_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[ReservationStatus] = mapped_column(
+        _str_enum(ReservationStatus, "reservation_status")
+    )
+    pickup_code: Mapped[str] = mapped_column(String(6))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    collected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    lot: Mapped[Lot] = relationship(lazy="joined")
+    association: Mapped[Association] = relationship(lazy="joined")

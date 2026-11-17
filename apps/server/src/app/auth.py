@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_session
 from app.errors import forbidden, unauthorized
-from app.models import Supplier, User
+from app.models import Association, Supplier, User
 from app.settings import get_settings
 
 ALGORITHM = "HS256"
@@ -99,3 +99,13 @@ def get_current_supplier(user: Annotated[User, Depends(get_current_user)]) -> Su
     if user.supplier is None:
         raise forbidden("Action réservée aux fournisseurs.")
     return user.supplier
+
+
+def get_current_association(user: Annotated[User, Depends(get_current_user)]) -> Association:
+    """FastAPI dependency: the association run by the current user, or 403.
+
+    As a dependency, the role is checked before the request body is validated.
+    """
+    if user.association is None:
+        raise forbidden("Action réservée aux associations.")
+    return user.association

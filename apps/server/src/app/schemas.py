@@ -11,9 +11,11 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    SerializerFunctionWrapHandler,
     ValidationInfo,
     field_serializer,
     field_validator,
+    model_serializer,
     model_validator,
 )
 from pydantic_core import PydanticCustomError
@@ -91,6 +93,11 @@ class LotStatus(StrEnum):
     RESERVED = "reserved"
     COLLECTED = "collected"
     EXPIRED = "expired"
+
+
+class ReservationStatus(StrEnum):
+    BOOKED = "booked"
+    COLLECTED = "collected"
 
 
 class StrictModel(BaseModel):
@@ -305,6 +312,70 @@ class Lot(BaseModel):
     def _serialize_utc(self, value: datetime) -> datetime:
         """Date-times are answered in UTC, whatever the time zone of the database session."""
         return _to_utc(value)
+
+
+# ----- Reservations -----
+
+
+class ReservationCreate(StrictModel):
+    """`quantity` is required for a divisible lot; omitted, an indivisible lot is reserved
+    as a whole. Both rules need the lot: they are checked by the route."""
+
+    quantity: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=3)
+    pickup_at: AwareDatetime = Field(description="Heure de passage, dans le créneau de collecte")
+
+
+class LotSummary(BaseModel):
+    """Lot as it appears in a reservation."""
+
+    id: int
+    title: str
+    unit: QuantityUnit
+    divisible: bool
+    use_by_date: date
+    storage: Storage
+    pickup_start: datetime
+    pickup_end: datetime
+    supplier: SupplierSummary
+
+    @field_serializer("pickup_start", "pickup_end")
+    def _serialize_utc(self, value: datetime) -> datetime:
+        return _to_utc(value)
+
+
+class Reservation(BaseModel):
+    id: int
+    lot: LotSummary
+    association: AssociationSummary
+    quantity: float
+    pickup_at: datetime
+    status: ReservationStatus
+    pickup_code: str | None = Field(
+        default=None,
+        pattern=r"^\d{6}$",
+        description="Code de collecte, renvoyé uniquement à l'association qui a réservé",
+    )
+    created_at: datetime
+    collected_at: datetime | None
+
+    @field_serializer("pickup_at", "created_at", "collected_at")
+    def _serialize_utc(self, value: datetime | None) -> datetime | None:
+        return None if value is None else _to_utc(value)
+
+    @model_serializer(mode="wrap")
+    def _omit_hidden_pickup_code(self, handler: SerializerFunctionWrapHandler):
+        """The pickup code is left out, not null, for whoever must not see it.
+
+        No return annotation: pydantic then keeps the model schema in the OpenAPI.
+        """
+        data = handler(self)
+        if data.get("pickup_code") is None:
+            data.pop("pickup_code", None)
+        return data
+
+
+class ReservationList(BaseModel):
+    data: list[Reservation]
 
 
 # ----- Pagination -----
