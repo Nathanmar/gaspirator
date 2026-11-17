@@ -281,6 +281,10 @@ class LotPage(BaseModel):
     meta: PageMeta
 
 
+class LotList(BaseModel):
+    data: list[Lot]
+
+
 # ----- Fournisseurs (US-03) -----
 
 

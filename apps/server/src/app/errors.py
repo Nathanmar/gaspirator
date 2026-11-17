@@ -71,6 +71,7 @@ _BAD_REQUEST_ON_VALIDATION = {"refreshToken", "logout", "listMyLots", "searchSup
 _NOT_FOUND_ON_VALIDATION = {
     "getLot": "Lot introuvable.",
     "getSupplier": "Fournisseur introuvable.",
+    "listSupplierLots": "Fournisseur introuvable.",
 }
 
 

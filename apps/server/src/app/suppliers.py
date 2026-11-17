@@ -11,9 +11,10 @@ from app import models
 from app.auth import get_current_association, get_current_user
 from app.db import get_session
 from app.errors import ApiError, not_found
-from app.lots import supplier_summary
+from app.lots import supplier_summary, to_schema
 from app.schemas import (
     Error,
+    LotList,
     PageMeta,
     SupplierProfile,
     SupplierSearchPage,
@@ -151,3 +152,24 @@ def get_supplier(supplier_id: SupplierId, _: CurrentUser, session: DbSession) ->
         .where(models.Lot.supplier_id == supplier.id, is_available(datetime.now(UTC)))
     )
     return SupplierProfile(**supplier_summary(supplier).model_dump(), available_lots_count=count)
+
+
+@router.get(
+    "/suppliers/{supplierId}/lots",
+    response_model=LotList,
+    operation_id="listSupplierLots",
+    responses=_errors(401, 404),
+)
+def list_supplier_lots(supplier_id: SupplierId, _: CurrentUser, session: DbSession) -> LotList:
+    """The available lots of a supplier, soonest pickup first.
+
+    Available: something left to reserve, pickup window not over, use-by date not passed.
+    """
+    supplier = _get_supplier(session, supplier_id)
+    now = datetime.now(UTC)
+    lots = session.scalars(
+        select(models.Lot)
+        .where(models.Lot.supplier_id == supplier.id, is_available(now))
+        .order_by(models.Lot.pickup_start, models.Lot.id)
+    ).all()
+    return LotList(data=[to_schema(lot, now) for lot in lots])
