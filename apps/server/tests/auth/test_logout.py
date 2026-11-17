@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 import httpx2
-from jose import jwt
+import jwt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 

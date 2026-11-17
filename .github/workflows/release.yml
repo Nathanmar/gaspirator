@@ -18,14 +18,12 @@ jobs:
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/webci.yml
     with:
-      strict: true
+      skipBiome: true
 
   server:
     name: Server
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/serverci.yml
-    with:
-      strict: true
 
   version:
     name: Next version

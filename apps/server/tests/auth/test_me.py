@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 import httpx2
-from jose import jwt
+import jwt
 from sqlalchemy.orm import Session
 
 from app.auth import ALGORITHM, create_access_token
