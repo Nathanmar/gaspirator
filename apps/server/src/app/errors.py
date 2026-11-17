@@ -64,7 +64,7 @@ _UNAUTHORIZED_HEADERS = {"WWW-Authenticate": "Bearer"}
 
 # Operations whose contract has no 422 response: invalid fields are a 400 (`BadRequest`
 # covers "paramètre incorrect").
-_BAD_REQUEST_ON_VALIDATION = {"refreshToken", "logout", "listMyLots"}
+_BAD_REQUEST_ON_VALIDATION = {"refreshToken", "logout", "listMyLots", "listMyReservations"}
 
 # Operations whose contract has neither 400 nor 422: an id that cannot exist (not an
 # integer, out of range) is simply not found.

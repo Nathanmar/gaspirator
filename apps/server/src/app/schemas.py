@@ -392,6 +392,11 @@ class LotPage(BaseModel):
     meta: PageMeta
 
 
+class ReservationPage(BaseModel):
+    data: list[Reservation]
+    meta: PageMeta
+
+
 # ----- Erreurs -----
 
 

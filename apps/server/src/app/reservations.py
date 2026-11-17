@@ -1,12 +1,13 @@
-"""US-04: reservations of a lot by the associations (/lots/{lotId}/reservations)."""
+"""US-04: reservations of lots by the associations
+(/lots/{lotId}/reservations, /me/reservations)."""
 
 import secrets
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func, select
 
 from app import models
 from app.auth import get_current_association
@@ -26,9 +27,11 @@ from app.schemas import (
     GeoPoint,
     LotStatus,
     LotSummary,
+    PageMeta,
     Reservation,
     ReservationCreate,
     ReservationList,
+    ReservationPage,
     ReservationStatus,
 )
 
@@ -202,3 +205,35 @@ def create_reservation(
     session.commit()
     session.refresh(reservation)
     return to_schema(reservation, with_pickup_code=True)
+
+
+@router.get(
+    "/me/reservations",
+    response_model=ReservationPage,
+    operation_id="listMyReservations",
+    responses=_errors(400, 401, 403),
+)
+def list_my_reservations(
+    association: CurrentAssociation,
+    session: DbSession,
+    page: Annotated[int, Query(ge=1)] = 1,
+    per_page: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> ReservationPage:
+    """The reservations of the current association, most recent first, with their pickup
+    codes."""
+    mine = models.Reservation.association_id == association.id
+    total = session.scalar(select(func.count()).select_from(models.Reservation).where(mine))
+    offset = (page - 1) * per_page
+    reservations = []
+    if offset < total:  # also keeps a huge page from overflowing the SQL OFFSET
+        reservations = session.scalars(
+            select(models.Reservation)
+            .where(mine)
+            .order_by(models.Reservation.created_at.desc(), models.Reservation.id.desc())
+            .offset(offset)
+            .limit(per_page)
+        ).all()
+    return ReservationPage(
+        data=[to_schema(reservation, with_pickup_code=True) for reservation in reservations],
+        meta=PageMeta(page=page, per_page=per_page, total=total),
+    )
