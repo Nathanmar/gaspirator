@@ -1,7 +1,9 @@
 """POST /registration-requests: 201 `RegistrationRequest`, 400, 409 and 422 (format `Error`).
 
 The body registers either a supplier (`supplier`, with a SIRET) or an association
-(`association`, with an RNA number), with the account of its manager.
+(`association`, with an RNA number), with the account of its manager. The address is
+geocoded (by the fake geocoder of conftest.py): 422 if it cannot be found, 503 (outside the
+contract) if the geocoding service is unavailable.
 """
 
 import httpx2
@@ -86,6 +88,34 @@ def test_register_association(api: httpx2.Client, association_registration: dict
     assert data["association_id"] is None
 
 
+def test_register_geocodes_the_address(
+    api: httpx2.Client, registration: dict, geocoder, db: Session
+):
+    """The address is geocoded when the request is sent; the position is kept with it."""
+    response = api.post(REGISTRATION_PATH, json=registration)
+
+    assert_contract(response)
+    assert response.status_code == 201
+    assert [address.model_dump() for address in geocoder.addresses] == [
+        registration["supplier"]["address"]
+    ]
+    request = db.get(RegistrationRequest, response.json()["id"])
+    assert (request.latitude, request.longitude) == (45.76511, 4.835769)
+
+
+def test_register_association_geocodes_the_address(
+    api: httpx2.Client, association_registration: dict, geocoder, db: Session
+):
+    response = api.post(REGISTRATION_PATH, json=association_registration)
+
+    assert response.status_code == 201
+    assert [address.model_dump() for address in geocoder.addresses] == [
+        association_registration["association"]["address"]
+    ]
+    request = db.get(RegistrationRequest, response.json()["id"])
+    assert request.latitude is not None and request.longitude is not None
+
+
 def test_register_does_not_create_the_supplier_yet(api: httpx2.Client, registration: dict, db):
     """The supplier is created when an admin approves the request; the user has none."""
     response = api.post(REGISTRATION_PATH, json=registration)
@@ -134,6 +164,17 @@ def test_register_email_already_used(
     assert_contract(response)
     _assert_error(response, 409, "conflict")
     assert _request_count(db) == 1
+
+
+def test_register_conflict_is_not_geocoded(api: httpx2.Client, registration: dict, geocoder):
+    """The conflicts are checked first: no call to the geocoding service for nothing."""
+    api.post(REGISTRATION_PATH, json=registration)
+    geocoder.addresses.clear()
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
+    assert response.status_code == 409
+    assert geocoder.addresses == []
 
 
 def test_register_siret_already_used(api: httpx2.Client, registration: dict, db: Session):
@@ -310,3 +351,64 @@ def test_register_unknown_field(api: httpx2.Client, registration: dict):
     response = api.post(REGISTRATION_PATH, json=registration)
 
     _assert_validation_error(response, "supplier.opening_hours")
+
+
+def test_register_invalid_body_is_not_geocoded(api: httpx2.Client, registration: dict, geocoder):
+    registration["account"]["email"] = "invalid-email"
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
+    assert response.status_code == 422
+    assert geocoder.addresses == []
+
+
+# ----- 422: address not found -----
+
+
+def _assert_address_not_found(response, field: str) -> None:
+    """The body respects the schema: only the response is out of the ordinary."""
+    assert_contract(response)
+    data = _assert_error(response, 422, "validation_error")
+    assert data["details"] == [{"field": field, "message": "adresse introuvable"}]
+
+
+def test_register_supplier_address_not_found(
+    api: httpx2.Client, registration: dict, geocoder, db: Session
+):
+    geocoder.point = None
+
+    response = api.post(REGISTRATION_PATH, json=registration)
+
+    _assert_address_not_found(response, "supplier.address")
+    assert _request_count(db) == 0
+    assert db.scalar(select(func.count()).select_from(User)) == 0
+
+
+def test_register_association_address_not_found(
+    api: httpx2.Client, association_registration: dict, geocoder, db: Session
+):
+    geocoder.point = None
+
+    response = api.post(REGISTRATION_PATH, json=association_registration)
+
+    _assert_address_not_found(response, "association.address")
+    assert _request_count(db) == 0
+
+
+# ----- 503: geocoding service unavailable (not in the contract) -----
+
+
+def test_register_geocoding_unavailable(
+    client: TestClient, registration: dict, geocoder, db: Session
+):
+    """Nothing the applicant can fix: 503, retry later, nothing is stored.
+
+    Sent in-process: the contract has no response for it, Prism would report it.
+    """
+    geocoder.unavailable = True
+
+    response = client.post(REGISTRATION_URL, json=registration)
+
+    _assert_error(response, 503, "service_unavailable")
+    assert int(response.headers["Retry-After"]) > 0
+    assert _request_count(db) == 0

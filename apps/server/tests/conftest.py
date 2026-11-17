@@ -21,9 +21,17 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.auth import create_access_token, hash_password
 from app.db import Base, get_session
+from app.geocoding import GeocodingUnavailable, get_geocoder
 from app.main import app
 from app.models import Association, RegistrationRequest, Supplier, User
-from app.schemas import OrganizationType, RegistrationStatus, SupplierType, UserRole
+from app.schemas import (
+    Address,
+    GeoPoint,
+    OrganizationType,
+    RegistrationStatus,
+    SupplierType,
+    UserRole,
+)
 from tests.prism import API_PREFIX, prism_proxy, serve_api
 
 TEST_DATABASE_URL = os.getenv(
@@ -119,15 +127,41 @@ def db(session_factory: sessionmaker[Session]) -> Iterator[Session]:
         yield session
 
 
+class FakeGeocoder:
+    """Stands in for the Géoplateforme: no request leaves the tests.
+
+    Every address is found at `point`; set `point = None` for "address not found", or
+    `unavailable = True` for a geocoding service that cannot be reached.
+    """
+
+    def __init__(self) -> None:
+        self.point: GeoPoint | None = GeoPoint(latitude=45.76511, longitude=4.835769)
+        self.unavailable = False
+        self.addresses: list[Address] = []
+
+    def geocode(self, address: Address) -> GeoPoint | None:
+        self.addresses.append(address)
+        if self.unavailable:
+            raise GeocodingUnavailable("service unreachable")
+        return self.point
+
+
 @pytest.fixture
-def client(session_factory: sessionmaker[Session]) -> Iterator[TestClient]:
-    """Test client whose requests use the test database."""
+def geocoder() -> FakeGeocoder:
+    """The geocoder used by the app in this test (see `FakeGeocoder`)."""
+    return FakeGeocoder()
+
+
+@pytest.fixture
+def client(session_factory: sessionmaker[Session], geocoder: FakeGeocoder) -> Iterator[TestClient]:
+    """Test client whose requests use the test database and the fake geocoder."""
 
     def _get_session() -> Iterator[Session]:
         with session_factory() as session:
             yield session
 
     app.dependency_overrides[get_session] = _get_session
+    app.dependency_overrides[get_geocoder] = lambda: geocoder
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
@@ -141,10 +175,13 @@ def prism_url(engine: Engine) -> Iterator[str]:
 
 
 @pytest.fixture
-def api(prism_url: str, session_factory: sessionmaker[Session]) -> Iterator[httpx2.Client]:
+def api(
+    prism_url: str, session_factory: sessionmaker[Session], geocoder: FakeGeocoder
+) -> Iterator[httpx2.Client]:
     """HTTP client going through Prism (paths without `/api/v1`, as in openapi.yaml).
 
-    Check each response with `tests.prism.assert_contract`.
+    The app uses the test database and the fake geocoder. Check each response with
+    `tests.prism.assert_contract`.
     """
 
     def _get_session() -> Iterator[Session]:
@@ -152,6 +189,7 @@ def api(prism_url: str, session_factory: sessionmaker[Session]) -> Iterator[http
             yield session
 
     app.dependency_overrides[get_session] = _get_session
+    app.dependency_overrides[get_geocoder] = lambda: geocoder
     with httpx2.Client(base_url=prism_url, timeout=30) as http_client:
         yield http_client
     app.dependency_overrides.clear()
