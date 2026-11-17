@@ -121,6 +121,46 @@ class SupplierSummary(BaseModel):
     contact_phone: str
 
 
+class Supplier(SupplierSummary):
+    """Full supplier, seen by its manager (`Supplier` of the contract)."""
+
+    legal_id: str
+    created_at: datetime
+
+
+class AssociationSummary(BaseModel):
+    """Association as seen by the suppliers (`AssociationSummary` of the contract)."""
+
+    id: int
+    name: str
+    address: Address
+    location: GeoPoint
+    contact_phone: str
+
+
+class Association(AssociationSummary):
+    """Full association, seen by its manager (`Association` of the contract)."""
+
+    legal_id: str
+    created_at: datetime
+
+
+class Me(BaseModel):
+    """The logged-in user (`Me` of the contract)."""
+
+    id: int
+    email: EmailStr
+    firstname: str
+    lastname: str
+    role: UserRole
+    supplier: Supplier | None = Field(
+        description="Fournisseur dont l'utilisateur est responsable, null sinon"
+    )
+    association: Association | None = Field(
+        description="Association dont l'utilisateur est responsable, null sinon"
+    )
+
+
 class SupplierCreate(StrictModel):
     name: str = Field(min_length=2, max_length=255)
     legal_id: str = Field(pattern=r"^\d{14}$", description="SIRET (14 chiffres)")
