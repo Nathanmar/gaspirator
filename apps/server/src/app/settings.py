@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     company_registry_url: str = "https://recherche-entreprises.api.gouv.fr"
     company_registry_timeout_seconds: float = 10
 
+    # Development data inserted at start-up by `python -m app.seed` (docker-compose.yml
+    # only). Never set it in production.
+    seed_dev_data: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:
