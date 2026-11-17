@@ -11,11 +11,6 @@ const supplier: RegisterFormValues = {
 		name: "Cantine du lycée Ampère",
 		legal_id: "19690103400017",
 		supplier_type: "canteen",
-		address: {
-			street: "12 rue de la République",
-			postal_code: "69002",
-			city: "Lyon",
-		},
 		contact_phone: "04 78 00 00 00",
 	},
 	account: {
@@ -56,11 +51,6 @@ describe("registerSchema", () => {
 				name: "Cantine du lycée Ampère",
 				legal_id: "19690103400017",
 				supplier_type: "canteen",
-				address: {
-					street: "12 rue de la République",
-					postal_code: "69002",
-					city: "Lyon",
-				},
 				contact_phone: "04 78 00 00 00",
 			},
 			account: {
@@ -85,11 +75,6 @@ describe("registerSchema", () => {
 			association: {
 				name: "Cantine du lycée Ampère",
 				legal_id: "W691234567",
-				address: {
-					street: "12 rue de la République",
-					postal_code: "69002",
-					city: "Lyon",
-				},
 				contact_phone: "04 78 00 00 00",
 			},
 			account: {
@@ -142,16 +127,6 @@ describe("registerSchema", () => {
 				"organization.supplier_type",
 			),
 		).toBe("Choisissez le type d'établissement.");
-	});
-
-	it("requires a 5-digit postal code", () => {
-		const values = withOrganization({
-			address: { ...supplier.organization.address, postal_code: "6900" },
-		});
-
-		expect(errorAt(values, "organization.address.postal_code")).toBe(
-			"Le code postal doit contenir 5 chiffres.",
-		);
 	});
 
 	it("requires a phone number of at least 10 characters", () => {

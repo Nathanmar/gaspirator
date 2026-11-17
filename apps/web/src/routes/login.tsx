@@ -7,7 +7,7 @@ import { LoginPage } from "@/features/auth/login-page";
 export const Route = createFileRoute("/login")({
 	validateSearch: authSearchSchema,
 	beforeLoad: redirectIfLoggedIn,
-	head: () => ({ meta: [{ title: "Connexion — Gaspirator" }] }),
+	head: () => ({ meta: [{ title: "Connexion - Gaspirator" }] }),
 	component: LoginRoute,
 });
 

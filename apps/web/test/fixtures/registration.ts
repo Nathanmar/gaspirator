@@ -13,18 +13,11 @@ const account = {
 	password: "motdepasse",
 } as const;
 
-const address = {
-	street: "12 rue de la République",
-	postal_code: "69002",
-	city: "Lyon",
-} as const;
-
 export const supplierRegistration = {
 	supplier: {
 		name: "Cantine du lycée Ampère",
 		legal_id: "19690103400017",
 		supplier_type: "canteen",
-		address,
 		contact_phone: "04 78 00 00 00",
 	},
 	account,
@@ -34,7 +27,6 @@ export const associationRegistration = {
 	association: {
 		name: "Restos du Cœur Lyon 2",
 		legal_id: "W691234567",
-		address,
 		contact_phone: "04 78 00 00 01",
 	},
 	account,

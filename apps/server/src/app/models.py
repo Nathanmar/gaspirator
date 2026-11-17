@@ -144,9 +144,10 @@ class RegistrationRequest(Base):
     supplier_type: Mapped[SupplierType | None] = mapped_column(
         _str_enum(SupplierType, "supplier_type")
     )
-    street: Mapped[str] = mapped_column(String(255))
-    postal_code: Mapped[str] = mapped_column(String(5))
-    city: Mapped[str] = mapped_column(String(120))
+    # Address: optional at registration, asked later.
+    street: Mapped[str | None] = mapped_column(String(255))
+    postal_code: Mapped[str | None] = mapped_column(String(5))
+    city: Mapped[str | None] = mapped_column(String(120))
     contact_phone: Mapped[str] = mapped_column(String(20))
 
     # Supplier or association created when an admin approves the request.

@@ -5,7 +5,7 @@ import { Landing } from "@/components/landing/landing";
 export const Route = createFileRoute("/")({
 	head: () => ({
 		meta: [
-			{ title: "Gaspirator — Le surplus des uns, le repas des autres" },
+			{ title: "Gaspirator - Le surplus des uns, le repas des autres" },
 			{
 				name: "description",
 				content:

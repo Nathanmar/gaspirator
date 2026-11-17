@@ -31,7 +31,9 @@ _LEGAL_ID_USED = "Ce SIRET ou ce n° RNA est déjà utilisé."
 
 
 def _to_schema(request: models.RegistrationRequest) -> RegistrationRequest:
-    address = Address(street=request.street, postal_code=request.postal_code, city=request.city)
+    address = None
+    if request.street is not None:
+        address = Address(street=request.street, postal_code=request.postal_code, city=request.city)
     supplier = association = None
     if request.organization_type == OrganizationType.SUPPLIER:
         supplier = SupplierCreate(
@@ -114,9 +116,9 @@ def create_registration_request(
         organization_name=applicant.name,
         legal_id=applicant.legal_id,
         supplier_type=payload.supplier.supplier_type if payload.supplier else None,
-        street=applicant.address.street,
-        postal_code=applicant.address.postal_code,
-        city=applicant.address.city,
+        street=applicant.address.street if applicant.address else None,
+        postal_code=applicant.address.postal_code if applicant.address else None,
+        city=applicant.address.city if applicant.address else None,
         contact_phone=applicant.contact_phone,
     )
     session.add(request)
