@@ -1,0 +1,27 @@
+opencollection: 1.0.0
+
+info:
+  name: gaspirator
+
+request:
+  # Default for every request: the classic (manager) JWT. The admin folder overrides it.
+  auth:
+    type: bearer
+    token: "{{USER_TOKEN}}"
+  variables:
+    - name: BASE_URL
+      value: http://localhost:8000/api/v1
+    - name: ADMIN_EMAIL
+      value: ""
+    - name: ADMIN_PASSWORD
+      value: ""
+    - name: USER_EMAIL
+      value: ""
+    - name: USER_PASSWORD
+      value: ""
+bundled: false
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git

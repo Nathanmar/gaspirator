@@ -1,0 +1,36 @@
+info:
+  name: Create lot
+  type: http
+  seq: 1
+http:
+  method: POST
+  url: "{{BASE_URL_LOTS}}"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Hachis parmentier",
+        "category": "prepared_meal",
+        "quantity": 30,
+        "unit": "portions",
+        "divisible": true,
+        "use_by_date": "{{USE_BY_DATE}}",
+        "allergens": [],
+        "storage": "refrigerated",
+        "pickup_start": "{{PICKUP_START}}",
+        "pickup_end": "{{PICKUP_END}}"
+      }
+  auth: inherit
+runtime:
+  scripts:
+    - type: before-request
+      code: |-
+        // Tomorrow 13:00-15:00 UTC, so the lot is always valid.
+        const day = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+        bru.setVar("USE_BY_DATE", day);
+        bru.setVar("PICKUP_START", `${day}T13:00:00Z`);
+        bru.setVar("PICKUP_END", `${day}T15:00:00Z`);
+        bru.setVar("PICKUP_AT", `${day}T14:00:00Z`);
+    - type: after-response
+      code: |-
+        if (res.status === 201) bru.setVar("LOT_ID", res.body.id);

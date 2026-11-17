@@ -34,6 +34,16 @@ jobs:
               - *workflows
               - openapi.yaml
               - apps/web/**
+              - packages/**
+              - package.json
+              - pnpm-lock.yaml
+              - pnpm-workspace.yaml
+              - turbo.json
+              - tsconfig.json
+              - biome.json
+            mobile:
+              - *workflows
+              - openapi.yaml
               - apps/mobile/**
               - packages/**
               - package.json

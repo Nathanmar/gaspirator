@@ -1,0 +1,8 @@
+info:
+  name: Get lot
+  type: http
+  seq: 2
+http:
+  method: GET
+  url: "{{BASE_URL_LOTS}}/{{LOT_ID}}"
+  auth: inherit

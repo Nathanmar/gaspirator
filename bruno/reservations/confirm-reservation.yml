@@ -1,0 +1,14 @@
+info:
+  name: Confirm reservation (supplier)
+  type: http
+  seq: 4
+http:
+  method: POST
+  url: "{{BASE_URL_RESERVATIONS}}/{{RESERVATION_ID}}/confirm"
+  body:
+    type: json
+    data: |-
+      {
+        "pickup_code": "{{PICKUP_CODE}}"
+      }
+  auth: inherit
