@@ -70,6 +70,7 @@ docker compose exec db psql -U postgres -d gaspirator -c "UPDATE registration_re
 
 - **Web app**: `http://localhost:5173`
 - **API**: `http://localhost:8000`, interactive docs at `http://localhost:8000/docs`
+- **Mailpit** (e-mails caught in development): `http://localhost:8025`
 
 ## Docker
 
@@ -84,6 +85,22 @@ PostgreSQL 18 runs in the `db` service on `localhost:5432` (user `postgres`, pas
 ```sh
 docker compose up -d db
 ```
+
+### E-mails in development (Mailpit)
+
+The contract notifies the applicant by e-mail when an admin approves or rejects a registration request. In development, e-mails go to [Mailpit](https://mailpit.axllent.org/), a fake SMTP server that catches every message and never delivers it to the real address:
+
+```sh
+docker compose up -d mailpit
+```
+
+| What        | Address                                                   |
+| ----------- | --------------------------------------------------------- |
+| Web UI      | `http://localhost:8025` (inbox of every e-mail sent)      |
+| SMTP        | `localhost:1025` from the host, `mailpit:1025` in compose |
+| Credentials | none (no authentication, no TLS)                          |
+
+Nothing is stored: the inbox is emptied when the container is recreated.
 
 ## Backlog (MoSCoW)
 
