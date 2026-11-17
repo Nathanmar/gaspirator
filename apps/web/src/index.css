@@ -335,6 +335,46 @@ html.lenis body {
 	background-color: rgb(76 122 12 / 0.1);
 }
 
+/* Association space, between the home and its other pages (links with `viewTransition`): the
+   map (`view-transition-name: suppliers-map`) slides out to the right, or back in, while the new
+   page rises into place over the old one. Without motion the browser simply cross-fades. */
+@media (prefers-reduced-motion: no-preference) {
+	::view-transition-old(root) {
+		animation: none;
+	}
+	/* One movement: same duration and easing for the map and the page, started together. */
+	::view-transition-new(root),
+	::view-transition-old(suppliers-map),
+	::view-transition-new(suppliers-map) {
+		animation-duration: 0.7s;
+		animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+		animation-fill-mode: both;
+	}
+	::view-transition-new(root) {
+		animation-name: fade-up;
+	}
+	::view-transition-old(suppliers-map) {
+		animation-name: slide-out-right;
+	}
+	::view-transition-new(suppliers-map) {
+		animation-name: slide-out-right;
+		animation-direction: reverse;
+	}
+}
+
+@keyframes slide-out-right {
+	to {
+		transform: translateX(100%);
+	}
+}
+
+@keyframes fade-up {
+	from {
+		opacity: 0;
+		transform: translateY(0.75rem);
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.grain,
 	.scroll-dot,

@@ -10,12 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AssociationRouteRouteImport } from './routes/association/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as AssociationIndexRouteImport } from './routes/association/index'
+import { Route as AssociationHistoryRouteImport } from './routes/association/history'
+import { Route as AssociationReservationsReservationIdRouteImport } from './routes/association/reservations.$reservationId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssociationRouteRoute = AssociationRouteRouteImport.update({
+  id: '/association',
+  path: '/association',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -28,33 +37,82 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssociationIndexRoute = AssociationIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AssociationRouteRoute,
+} as any)
+const AssociationHistoryRoute = AssociationHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AssociationRouteRoute,
+} as any)
+const AssociationReservationsReservationIdRoute =
+  AssociationReservationsReservationIdRouteImport.update({
+    id: '/reservations/$reservationId',
+    path: '/reservations/$reservationId',
+    getParentRoute: () => AssociationRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/association': typeof AssociationRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/association/history': typeof AssociationHistoryRoute
+  '/association/': typeof AssociationIndexRoute
+  '/association/reservations/$reservationId': typeof AssociationReservationsReservationIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/association/history': typeof AssociationHistoryRoute
+  '/association': typeof AssociationIndexRoute
+  '/association/reservations/$reservationId': typeof AssociationReservationsReservationIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/association': typeof AssociationRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/association/history': typeof AssociationHistoryRoute
+  '/association/': typeof AssociationIndexRoute
+  '/association/reservations/$reservationId': typeof AssociationReservationsReservationIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register'
+  fullPaths:
+    | '/'
+    | '/association'
+    | '/login'
+    | '/register'
+    | '/association/history'
+    | '/association/'
+    | '/association/reservations/$reservationId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register'
-  id: '__root__' | '/' | '/login' | '/register'
+  to:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/association/history'
+    | '/association'
+    | '/association/reservations/$reservationId'
+  id:
+    | '__root__'
+    | '/'
+    | '/association'
+    | '/login'
+    | '/register'
+    | '/association/history'
+    | '/association/'
+    | '/association/reservations/$reservationId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AssociationRouteRoute: typeof AssociationRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
 }
@@ -66,6 +124,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/association': {
+      id: '/association'
+      path: '/association'
+      fullPath: '/association'
+      preLoaderRoute: typeof AssociationRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -82,11 +147,49 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/association/': {
+      id: '/association/'
+      path: '/'
+      fullPath: '/association/'
+      preLoaderRoute: typeof AssociationIndexRouteImport
+      parentRoute: typeof AssociationRouteRoute
+    }
+    '/association/history': {
+      id: '/association/history'
+      path: '/history'
+      fullPath: '/association/history'
+      preLoaderRoute: typeof AssociationHistoryRouteImport
+      parentRoute: typeof AssociationRouteRoute
+    }
+    '/association/reservations/$reservationId': {
+      id: '/association/reservations/$reservationId'
+      path: '/reservations/$reservationId'
+      fullPath: '/association/reservations/$reservationId'
+      preLoaderRoute: typeof AssociationReservationsReservationIdRouteImport
+      parentRoute: typeof AssociationRouteRoute
+    }
   }
 }
 
+interface AssociationRouteRouteChildren {
+  AssociationHistoryRoute: typeof AssociationHistoryRoute
+  AssociationIndexRoute: typeof AssociationIndexRoute
+  AssociationReservationsReservationIdRoute: typeof AssociationReservationsReservationIdRoute
+}
+
+const AssociationRouteRouteChildren: AssociationRouteRouteChildren = {
+  AssociationHistoryRoute: AssociationHistoryRoute,
+  AssociationIndexRoute: AssociationIndexRoute,
+  AssociationReservationsReservationIdRoute:
+    AssociationReservationsReservationIdRoute,
+}
+
+const AssociationRouteRouteWithChildren =
+  AssociationRouteRoute._addFileChildren(AssociationRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AssociationRouteRoute: AssociationRouteRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
 }

@@ -62,11 +62,29 @@ pnpm dev:web
 
 The web app (`http://localhost:5173`) talks to the API through the Prism validation proxy on `http://127.0.0.1:4010`, the default `VITE_API_URL`: Prism answers CORS for the dev server and checks every exchange against `openapi.yaml`. Stop `pnpm mock` first, both use port 4010.
 
-A new account stays `pending` until an admin approves it. Until the admin routes exist, approve one in the local database:
+A new account stays `pending` until an admin approves it. Until the admin routes exist, approve one in the local database: like the approve route, this creates the association from the request (its address and geocoded position) and links it to the request and the user.
 
 ```sh
-docker compose exec db psql -U postgres -d gaspirator -c "UPDATE registration_requests SET status = 'approved' WHERE user_id = (SELECT id FROM users WHERE lower(email) = 'marie.dupont@example.org');"
+docker compose exec -T db psql -U postgres -d gaspirator -v email=marie.dupont@example.org <<'SQL'
+begin;
+with request as (
+  select r.* from registration_requests r join users u on u.id = r.user_id
+  where lower(u.email) = lower(:'email')
+), created as (
+  insert into associations (name, legal_id, street, postal_code, city, latitude, longitude, contact_phone)
+  select organization_name, legal_id, street, postal_code, city, latitude, longitude, contact_phone from request
+  returning id
+)
+update registration_requests
+set status = 'approved', association_id = (select id from created), decided_at = now()
+where id = (select id from request);
+update users u set association_id = r.association_id
+from registration_requests r where r.user_id = u.id and lower(u.email) = lower(:'email');
+commit;
+SQL
 ```
+
+For a supplier, insert into `suppliers` (adding `supplier_type` to both column lists) and set `supplier_id` instead of `association_id`. Requests sent before the address lookup may have no position: send them again.
 
 ## Connections
 

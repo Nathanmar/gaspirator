@@ -4,8 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "@/features/auth/auth-store";
 import { LoginPage } from "@/features/auth/login-page";
 
+import { associationMe, supplierMe } from "../../fixtures/association";
 import { tokens } from "../../fixtures/auth";
-import { jsonResponse, mockFetch, sentBody } from "../../utils/fetch";
+import { jsonResponse, mockApi, mockFetch, sentBody } from "../../utils/fetch";
 import { renderWithRouter } from "../../utils/render-with-router";
 
 beforeEach(() => {
@@ -36,17 +37,47 @@ describe("LoginPage", () => {
 		).toHaveAttribute("href", "/register?role=association");
 	});
 
-	it("stores the tokens and goes to the home page once logged in", async () => {
-		const fetchMock = mockFetch(jsonResponse(200, tokens));
+	it("stores the tokens and opens the association space for its manager", async () => {
+		const fetchMock = mockApi({
+			"/auth/login": jsonResponse(200, tokens),
+			"/me": jsonResponse(200, associationMe),
+		});
+		const router = renderWithRouter(<LoginPage />, { path: "/login" });
+
+		await logIn();
+
+		await waitFor(() =>
+			expect(router.state.location.pathname).toBe("/association"),
+		);
+		expect(sentBody(fetchMock)).toEqual({
+			email: "marie.dupont@example.org",
+			password: "secret",
+		});
+		expect(useAuthStore.getState().tokens).toEqual(tokens);
+	});
+
+	it("goes to the home page for an account without a space yet", async () => {
+		mockApi({
+			"/auth/login": jsonResponse(200, tokens),
+			"/me": jsonResponse(200, supplierMe),
+		});
 		const router = renderWithRouter(<LoginPage />, { path: "/login" });
 
 		await logIn();
 
 		await waitFor(() => expect(router.state.location.pathname).toBe("/"));
-		expect(sentBody(fetchMock)).toEqual({
-			email: "marie.dupont@example.org",
-			password: "secret",
+	});
+
+	it("still logs in when the profile cannot be loaded", async () => {
+		mockApi({
+			"/auth/login": jsonResponse(200, tokens),
+			"/me": jsonResponse(500, null),
 		});
+		const router = renderWithRouter(<LoginPage />, { path: "/login" });
+
+		await logIn();
+
+		await waitFor(() => expect(router.state.location.pathname).toBe("/"));
 		expect(useAuthStore.getState().tokens).toEqual(tokens);
 	});
 

@@ -14,7 +14,13 @@ import "../index.css";
 
 export type RouterAppContext = Record<string, never>;
 
-const FULL_BLEED_PATHS = new Set(["/", "/login", "/register"]);
+const FULL_BLEED_SECTIONS = ["/login", "/register", "/association"];
+
+const isFullBleedPath = (pathname: string) =>
+	pathname === "/" ||
+	FULL_BLEED_SECTIONS.some(
+		(section) => pathname === section || pathname.startsWith(`${section}/`),
+	);
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
 	component: RootComponent,
@@ -34,7 +40,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 function RootComponent() {
 	// The landing and auth pages are full-bleed and bring their own navigation.
 	const isFullBleed = useRouterState({
-		select: (state) => FULL_BLEED_PATHS.has(state.location.pathname),
+		select: (state) => isFullBleedPath(state.location.pathname),
 	});
 
 	return (

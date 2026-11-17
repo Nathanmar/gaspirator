@@ -9,13 +9,10 @@ import {
 	SelectField,
 	SubmitButton,
 } from "@/components/form-controls";
+import { SUPPLIER_TYPE_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
-import type {
-	OrganizationType,
-	RegistrationRequestCreate,
-	SupplierType,
-} from "./auth-api";
+import type { OrganizationType, RegistrationRequestCreate } from "./auth-api";
 import {
 	accountSchema,
 	organizationSchema,
@@ -31,13 +28,6 @@ const ORGANIZATION_TYPES = [
 	{ value: "supplier", label: "Fournisseur", tone: "lime" },
 	{ value: "association", label: "Association", tone: "tomato" },
 ] as const;
-
-const SUPPLIER_TYPE_LABELS: Record<SupplierType, string> = {
-	canteen: "Cantine",
-	hospital: "Hôpital",
-	supermarket: "Supermarché",
-	other: "Autre",
-};
 
 const SUPPLIER_TYPE_OPTIONS = SUPPLIER_TYPES.map((value) => ({
 	value,

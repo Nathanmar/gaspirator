@@ -9,7 +9,41 @@ export type OrganizationType = "supplier" | "association";
 /** `SupplierType` in the API contract: kind of establishment of a supplier. */
 export type SupplierType = "canteen" | "hospital" | "supermarket" | "other";
 
-type Address = { street: string; postal_code: string; city: string };
+export type Address = { street: string; postal_code: string; city: string };
+
+export type GeoPoint = { latitude: number; longitude: number };
+
+export type SupplierSummary = {
+	id: number;
+	name: string;
+	supplier_type: SupplierType;
+	address: Address;
+	location: GeoPoint;
+	contact_phone: string;
+};
+
+export type AssociationSummary = {
+	id: number;
+	name: string;
+	address: Address;
+	location: GeoPoint;
+	contact_phone: string;
+};
+
+type OrganizationDetails = { legal_id: string; created_at: string };
+
+export type Supplier = SupplierSummary & OrganizationDetails;
+export type Association = AssociationSummary & OrganizationDetails;
+
+export type Me = {
+	id: number;
+	email: string;
+	firstname: string;
+	lastname: string;
+	role: "admin" | "manager";
+	supplier: Supplier | null;
+	association: Association | null;
+};
 
 /** `SupplierCreate` in the API contract. */
 export type SupplierCreate = {
@@ -81,6 +115,14 @@ export function login(credentials: LoginRequest): Promise<AuthTokens> {
 	return apiRequest<AuthTokens>("/auth/login", {
 		method: "POST",
 		body: credentials,
+	});
+}
+
+/** `POST /auth/refresh`: the API invalidates the refresh token sent and returns a new pair. */
+export function refreshTokens(refreshToken: string): Promise<AuthTokens> {
+	return apiRequest<AuthTokens>("/auth/refresh", {
+		method: "POST",
+		body: { refresh_token: refreshToken },
 	});
 }
 
