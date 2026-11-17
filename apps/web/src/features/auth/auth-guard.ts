@@ -4,5 +4,5 @@ import { useAuthStore } from "./auth-store";
 
 /** `beforeLoad` of the login and registration routes: a logged-in user goes to the home page. */
 export function redirectIfLoggedIn() {
-  if (useAuthStore.getState().tokens) throw redirect({ to: "/" });
+	if (useAuthStore.getState().tokens) throw redirect({ to: "/" });
 }
