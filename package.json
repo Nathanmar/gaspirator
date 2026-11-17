@@ -20,7 +20,12 @@
     "dev:part:backend:python:fastapi": "pnpm dev:server",
     "check:part:backend:python:fastapi": "pnpm check:server",
     "test:part:backend:python:fastapi": "pnpm test:server",
-    "test": "pnpm --filter web test"
+    "test": "pnpm --filter web test",
+    "prepare": "husky",
+    "lint": "biome check ."
+  },
+  "lint-staged": {
+    "apps/{web,mobile}/**/*": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
   },
   "dependencies": {
     "@gaspirator/env": "workspace:*",
@@ -28,10 +33,13 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.8",
     "@gaspirator/config": "workspace:*",
     "@stoplight/prism-cli": "^5.16.0",
     "@types/bun": "catalog:",
     "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.1",
     "turbo": "2.10.11",
     "typescript": "catalog:"
   },

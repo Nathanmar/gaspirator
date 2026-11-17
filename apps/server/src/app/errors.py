@@ -64,11 +64,15 @@ _UNAUTHORIZED_HEADERS = {"WWW-Authenticate": "Bearer"}
 
 # Operations whose contract has no 422 response: invalid fields are a 400 (`BadRequest`
 # covers "paramètre incorrect").
-_BAD_REQUEST_ON_VALIDATION = {"refreshToken", "logout", "listMyLots"}
+_BAD_REQUEST_ON_VALIDATION = {"refreshToken", "logout", "listMyLots", "searchSuppliers"}
 
 # Operations whose contract has neither 400 nor 422: an id that cannot exist (not an
 # integer, out of range) is simply not found.
-_NOT_FOUND_ON_VALIDATION = {"getLot": "Lot introuvable."}
+_NOT_FOUND_ON_VALIDATION = {
+    "getLot": "Lot introuvable.",
+    "getSupplier": "Fournisseur introuvable.",
+    "listSupplierLots": "Fournisseur introuvable.",
+}
 
 
 class ApiError(Exception):

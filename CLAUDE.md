@@ -42,6 +42,7 @@ gaspirator/
 - `pnpm dev` - Start development server
 - `pnpm build` - Build for production
 - `pnpm test` - Run tests
+- `pnpm lint` - Biome check on `apps/web` and `apps/mobile` (also runs on staged files via the husky pre-commit hook + lint-staged)
 - `pnpm db:push` - Push database schema
 - `pnpm db:studio` - Open database UI
 

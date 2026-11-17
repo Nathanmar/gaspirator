@@ -1,0 +1,68 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.6.8/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true,
+		"defaultBranch": "develop"
+	},
+	"files": {
+		"ignoreUnknown": false,
+		"includes": [
+			"apps/web/**",
+			"apps/mobile/**",
+			"!**/routeTree.gen.ts",
+			"!apps/web/public/maplibre",
+			"!**/*.svg"
+		]
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended"
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["apps/web/test/**", "**/*.test.*"],
+			"linter": { "enabled": false }
+		},
+		{
+			"includes": ["apps/mobile/**"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noReactNativeRawText": {
+							"level": "error",
+							"options": {
+								"skip": ["ThemedText", "TabButton", "NativeTabs.Trigger.Label"]
+							}
+						}
+					}
+				}
+			}
+		}
+	],
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double"
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	}
+}
