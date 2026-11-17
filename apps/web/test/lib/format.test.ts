@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	formatDate,
 	formatDateTime,
 	formatDistance,
 	formatPickupCode,
+	formatPickupWindow,
 	formatQuantity,
 } from "@/lib/format";
 
@@ -42,6 +44,32 @@ describe("formatDateTime", () => {
 		expect(plain(formatDateTime("2026-07-03T14:15:00Z"))).toBe(
 			"ven. 3 juil. à 16:15",
 		);
+	});
+});
+
+describe("formatPickupWindow", () => {
+	it("gives the time range of a window within one day", () => {
+		expect(
+			plain(formatPickupWindow("2026-11-03T13:00:00Z", "2026-11-03T15:00:00Z")),
+		).toBe("mar. 3 nov., entre 14:00 et 16:00");
+	});
+
+	it("gives a single time when the window starts and ends together", () => {
+		expect(
+			plain(formatPickupWindow("2026-11-03T13:00:00Z", "2026-11-03T13:00:00Z")),
+		).toBe("mar. 3 nov. à 14:00");
+	});
+
+	it("gives both days of a window over midnight in Lyon", () => {
+		expect(
+			plain(formatPickupWindow("2026-11-03T21:00:00Z", "2026-11-04T08:00:00Z")),
+		).toBe("du mar. 3 nov. à 22:00 au mer. 4 nov. à 09:00");
+	});
+});
+
+describe("formatDate", () => {
+	it("gives the day of a calendar date, such as a use-by date", () => {
+		expect(plain(formatDate("2026-11-04"))).toBe("mer. 4 nov.");
 	});
 });
 

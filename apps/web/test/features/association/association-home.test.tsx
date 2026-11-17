@@ -1,9 +1,8 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { AssociationHome } from "@/features/association/association-home";
 import type { AssociationHomeData } from "@/features/association/association-loader";
-import { useAuthStore } from "@/features/auth/auth-store";
 
 import {
 	associationMe,
@@ -14,8 +13,6 @@ import {
 	nearbySupplier,
 	soonReservation,
 } from "../../fixtures/association";
-import { tokens } from "../../fixtures/auth";
-import { mockFetch } from "../../utils/fetch";
 import { renderWithRouter } from "../../utils/render-with-router";
 
 const home: AssociationHomeData = {
@@ -32,10 +29,6 @@ function renderHome(data: Partial<AssociationHomeData> = {}, radius = 10) {
 		{ path: "/association" },
 	);
 }
-
-beforeEach(() => {
-	useAuthStore.setState({ tokens });
-});
 
 describe("AssociationHome", () => {
 	it("greets the manager and names the association", async () => {
@@ -60,7 +53,7 @@ describe("AssociationHome", () => {
 			expect(items[1]).toHaveTextContent("Yaourts nature");
 		});
 
-		it("gives what, where, when, and the pickup code to show the supplier", async () => {
+		it("gives what, where and the pickup window of the lot", async () => {
 			renderHome();
 
 			const list = await screen.findByRole("list", {
@@ -70,21 +63,28 @@ describe("AssociationHome", () => {
 			expect(soonest).toHaveTextContent("12 portions");
 			expect(soonest).toHaveTextContent("Réfrigéré");
 			expect(soonest).toHaveTextContent("Cantine du lycée Ampère");
-			expect(soonest).toHaveTextContent("31 rue de la Bourse, 69002 Lyon");
-			expect(soonest).toHaveTextContent("mar. 3 nov. à 15:15");
-			expect(soonest).toHaveTextContent("Code de collecte");
-			expect(soonest).toHaveTextContent("482 913");
+			expect(soonest).toHaveTextContent("mar. 3 nov., entre 14:00 et 16:00");
 		});
 
-		it("keeps the collected reservations apart, without their code", async () => {
+		it("keeps the pickup code for the collection page", async () => {
 			renderHome();
 
-			const list = await screen.findByRole("list", { name: "Déjà collectées" });
-			const item = within(list).getByRole("listitem");
-			expect(item).toHaveTextContent("Pain de campagne");
-			expect(item).toHaveTextContent("3,5 kg");
-			expect(item).toHaveTextContent("Collectée le dim. 1 nov. à 18:05");
-			expect(item).not.toHaveTextContent("730 114");
+			const list = await screen.findByRole("list", {
+				name: "Collectes à venir",
+			});
+			expect(list).not.toHaveTextContent("482 913");
+			expect(
+				within(list).getByRole("link", { name: /Hachis parmentier/ }),
+			).toHaveAttribute("href", "/association/reservations/3");
+		});
+
+		it("leaves the collected reservations to the history page", async () => {
+			renderHome();
+
+			expect(
+				await screen.findByRole("link", { name: "Historique des collectes" }),
+			).toHaveAttribute("href", "/association/history");
+			expect(screen.queryByText("Pain de campagne")).not.toBeInTheDocument();
 		});
 
 		it("says when no collection is planned", async () => {
@@ -93,9 +93,6 @@ describe("AssociationHome", () => {
 			expect(
 				await screen.findByText("Aucune collecte prévue pour l'instant."),
 			).toBeInTheDocument();
-			expect(
-				screen.queryByRole("list", { name: "Déjà collectées" }),
-			).not.toBeInTheDocument();
 		});
 	});
 
@@ -124,6 +121,31 @@ describe("AssociationHome", () => {
 			expect(
 				await screen.findByRole("link", { name: /04 78 00 00 00/ }),
 			).toHaveAttribute("href", "tel:0478000000");
+		});
+
+		it("switches between the list and the map on the same page", async () => {
+			renderHome();
+
+			await userEvent.click(
+				await screen.findByRole("button", { name: "Carte" }),
+			);
+
+			expect(
+				screen.getByRole("group", { name: "Carte des fournisseurs" }),
+			).toBeInTheDocument();
+			expect(
+				screen.queryByRole("list", { name: "Fournisseurs autour de vous" }),
+			).not.toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Carte" })).toHaveAttribute(
+				"aria-pressed",
+				"true",
+			);
+
+			await userEvent.click(screen.getByRole("button", { name: "Liste" }));
+
+			expect(
+				screen.getByRole("list", { name: "Fournisseurs autour de vous" }),
+			).toBeInTheDocument();
 		});
 
 		it("offers other search radiuses and marks the current one", async () => {
@@ -165,17 +187,5 @@ describe("AssociationHome", () => {
 				screen.queryByRole("link", { name: /Chercher à/ }),
 			).not.toBeInTheDocument();
 		});
-	});
-
-	it("logs out and goes back to the home page", async () => {
-		mockFetch(new Response(null, { status: 204 }));
-		const router = renderHome();
-
-		await userEvent.click(
-			await screen.findByRole("button", { name: "Se déconnecter" }),
-		);
-
-		await waitFor(() => expect(router.state.location.pathname).toBe("/"));
-		expect(useAuthStore.getState().tokens).toBeNull();
 	});
 });

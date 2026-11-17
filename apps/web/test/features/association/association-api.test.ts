@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+	getReservation,
 	listMyReservations,
 	searchSuppliers,
 } from "@/features/association/association-api";
@@ -38,5 +39,24 @@ describe("listMyReservations", () => {
 
 		await expect(listMyReservations()).resolves.toEqual(page);
 		expect(requestedPaths(fetchMock)).toEqual(["/me/reservations"]);
+	});
+
+	it("asks for a bigger page when needed", async () => {
+		const fetchMock = mockFetch(jsonResponse(200, firstPage([])));
+
+		await listMyReservations({ per_page: 100 });
+
+		expect(requestedPaths(fetchMock)).toEqual([
+			"/me/reservations?per_page=100",
+		]);
+	});
+});
+
+describe("getReservation", () => {
+	it("gets one reservation of the association, with its pickup code", async () => {
+		const fetchMock = mockFetch(jsonResponse(200, soonReservation));
+
+		await expect(getReservation(3)).resolves.toEqual(soonReservation);
+		expect(requestedPaths(fetchMock)).toEqual(["/reservations/3"]);
 	});
 });
