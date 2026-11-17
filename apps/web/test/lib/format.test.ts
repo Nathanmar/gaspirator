@@ -4,6 +4,7 @@ import {
 	formatDate,
 	formatDateTime,
 	formatDistance,
+	formatMonth,
 	formatPickupCode,
 	formatPickupWindow,
 	formatQuantity,
@@ -64,6 +65,14 @@ describe("formatPickupWindow", () => {
 		expect(
 			plain(formatPickupWindow("2026-11-03T21:00:00Z", "2026-11-04T08:00:00Z")),
 		).toBe("du mar. 3 nov. à 22:00 au mer. 4 nov. à 09:00");
+	});
+});
+
+describe("formatMonth", () => {
+	it("gives the month in Lyon, capitalised for a heading", () => {
+		expect(formatMonth("2026-11-01T17:05:00Z")).toBe("Novembre 2026");
+		// 23:30 UTC on 31 October is already November in Lyon.
+		expect(formatMonth("2026-10-31T23:30:00Z")).toBe("Novembre 2026");
 	});
 });
 

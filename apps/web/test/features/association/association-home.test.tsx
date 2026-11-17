@@ -53,7 +53,7 @@ describe("AssociationHome", () => {
 			expect(items[1]).toHaveTextContent("Yaourts nature");
 		});
 
-		it("gives what, where and the pickup window of the lot", async () => {
+		it("gives what, where and the booked pickup time", async () => {
 			renderHome();
 
 			const list = await screen.findByRole("list", {
@@ -63,7 +63,7 @@ describe("AssociationHome", () => {
 			expect(soonest).toHaveTextContent("12 portions");
 			expect(soonest).toHaveTextContent("Réfrigéré");
 			expect(soonest).toHaveTextContent("Cantine du lycée Ampère");
-			expect(soonest).toHaveTextContent("mar. 3 nov., entre 14:00 et 16:00");
+			expect(soonest).toHaveTextContent("mar. 3 nov. à 15:15");
 		});
 
 		it("keeps the pickup code for the collection page", async () => {

@@ -44,8 +44,11 @@ describe("ReservationPage", () => {
 	it("says when and where to go", async () => {
 		renderReservation(soonReservation);
 
+		expect(await screen.findByText("mar. 3 nov. à 15:15")).toBeInTheDocument();
 		expect(
-			await screen.findByText("mar. 3 nov., entre 14:00 et 16:00"),
+			screen.getByText(
+				/Créneau du fournisseur : mar\. 3 nov\., entre 14:00 et 16:00/,
+			),
 		).toBeInTheDocument();
 		expect(screen.getByText("Cantine du lycée Ampère")).toBeInTheDocument();
 		expect(
