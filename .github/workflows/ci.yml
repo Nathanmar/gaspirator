@@ -10,183 +10,115 @@ permissions:
   contents: read
 
 jobs:
-  ci:
-    name: Lint, Type Check & Build
-    runs-on: ubuntu-latest
-
+  # Detects which parts changed, so each template below only runs when needed.
+  # A skipped job counts as passed, so required checks never block a PR.
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: read # paths-filter lists PR files through the API
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      server: ${{ steps.filter.outputs.server }}
+      workflows: ${{ steps.filter.outputs.workflows }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
         with:
-          fetch-depth: 0 # Biome --changed compares with origin/develop
+          filters: |
+            workflows: &workflows
+              - .github/workflows/**
+            web:
+              - *workflows
+              - openapi.yaml
+              - apps/web/**
+              - apps/mobile/**
+              - packages/**
+              - package.json
+              - pnpm-lock.yaml
+              - pnpm-workspace.yaml
+              - turbo.json
+              - tsconfig.json
+              - biome.json
+            server:
+              - *workflows
+              - openapi.yaml
+              - apps/server/**
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Biome
-        run: pnpm exec biome ci --changed --since=origin/develop --no-errors-on-unmatched
-
-      - name: Type check
-        run: pnpm run check-types
-
-      - name: Build
-        run: pnpm run build
+  web:
+    name: Web
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    uses: ./.github/workflows/webci.yml
 
   server:
-    name: Server lint & tests (Python)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/server
-    services:
-      # Same image as the `db` service of docker-compose.yml.
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: gaspirator_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d gaspirator_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/gaspirator_test
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-      # Node.js runs the Prism validation proxy (npx @stoplight/prism-cli) in the tests.
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - name: Install dependencies
-        run: uv sync --frozen --extra dev
-      - name: Ruff
-        run: uv run --frozen ruff check .
-      - name: Migrations up to date
-        run: uv run --frozen alembic upgrade head && uv run --frozen alembic check
-        env:
-          DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
-      - name: Pytest
-        run: uv run --frozen pytest
+    name: Server
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
+    uses: ./.github/workflows/serverci.yml
 
-  dependency-review:
-    name: Dependency review
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # Report only for now, like the other CVE checks.
-      - uses: actions/dependency-review-action@v4
-        continue-on-error: true
+  image-web:
+    name: Image web
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    uses: ./.github/workflows/imageci.yml
+    with:
+      name: web
+      context: .
+      dockerfile: apps/web/Dockerfile.vite
 
-  audit-web:
-    name: CVE audit (web / TanStack)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      # Report only for now: findings never fail the pipeline, whatever the severity.
-      - name: pnpm audit
-        continue-on-error: true
-        run: pnpm audit
+  image-server:
+    name: Image server
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
+    uses: ./.github/workflows/imageci.yml
+    with:
+      name: server
+      context: apps/server
+      dockerfile: apps/server/Dockerfile
 
-  audit-python:
-    name: CVE audit (server / Python)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/server
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-      - name: Export locked runtime dependencies
-        run: uv export --frozen --no-dev --no-hashes --no-emit-project -o requirements.txt
-      # Report only for now: findings never fail the pipeline, whatever the severity.
-      - name: pip-audit
-        continue-on-error: true
-        run: uvx pip-audit -r requirements.txt --no-deps --disable-pip
-
-  image:
-    name: Build & scan image (${{ matrix.name }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: web
-            context: .
-            dockerfile: apps/web/Dockerfile.vite
-          - name: server
-            context: apps/server
-            dockerfile: apps/server/Dockerfile
-    env:
-      IMAGE_TAR: /tmp/gaspirator-${{ matrix.name }}.tar
-      REPORT: /tmp/trivy-${{ matrix.name }}.txt
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Build image
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          tags: gaspirator-${{ matrix.name }}:${{ github.sha }}
-          outputs: type=docker,dest=${{ env.IMAGE_TAR }}
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
-
-      - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          version: v0.76.2
-          input: ${{ env.IMAGE_TAR }}
-          format: table
-          output: ${{ env.REPORT }}
-          exit-code: "0"
-
-      - name: Add report to job summary
-        run: |
-          {
-            echo "### Trivy report: ${{ matrix.name }}"
-            echo '```'
-            cat "$REPORT"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-
-  codeql:
-    name: CodeQL (${{ matrix.language }})
-    runs-on: ubuntu-latest
+  codeql-js:
+    name: CodeQL JS/TS
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    uses: ./.github/workflows/codeql.yml
     permissions:
       contents: read
       security-events: write
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [javascript-typescript, python, actions]
+    with:
+      language: javascript-typescript
+
+  codeql-python:
+    name: CodeQL Python
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
+    uses: ./.github/workflows/codeql.yml
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      language: python
+
+  codeql-actions:
+    name: CodeQL Actions
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    uses: ./.github/workflows/codeql.yml
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      language: actions
+
+  # Cheap and covers every manifest, so it always runs on PRs.
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v4
-        with:
-          languages: ${{ matrix.language }}
-          build-mode: none
-      - uses: github/codeql-action/analyze@v4
-        with:
-          category: /language:${{ matrix.language }}
+      - uses: actions/checkout@v7
+      # Report only for now, like the other CVE checks.
+      - uses: actions/dependency-review-action@v4
+        continue-on-error: true
