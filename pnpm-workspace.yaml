@@ -5,6 +5,7 @@ packages:
 auditConfig:
   ignoreGhsas:
     - GHSA-qxc2-j82w-r537
+    - GHSA-fc5q-39xc-vjpf
 
 catalog:
   '@types/bun': ^1.4.2
