@@ -108,9 +108,9 @@ Runs the web app on `http://localhost:3001` and the API on `http://localhost:800
 
 ### Development data
 
-In compose, the API starts with `SEED_DEV_DATA=true`: after the migrations, `python -m app.seed` fills an empty database with 10 suppliers and 5 associations around Paris, 30 lots (available, partly reserved, reserved, collected, expired) with their reservations, and 2 pending registration requests. It runs once: as soon as the seed admin exists, it is skipped. Lot dates are relative to the day of the seed; to start over, drop the volume with `docker compose down -v`.
+With `SEED_DEV_DATA=true` in `apps/server/.env` (as in `apps/server/.env.example`), the API container runs `python -m app.seed` after the migrations: it fills an empty database with 10 suppliers and 5 associations around Paris, 30 lots (available, partly reserved, reserved, collected, expired) with their reservations, and 2 pending registration requests. It runs once: as soon as the seed admin exists, it is skipped. Lot dates are relative to the day of the seed; to start over, drop the volume with `docker compose down -v`.
 
-Every account uses the password `gaspirator-dev`: `admin@example.org` (admin), the managers of the suppliers (e.g. `cantine.voltaire@example.org`) and of the associations (e.g. `solidarite.paris-est@example.org`); the full list is in `apps/server/src/app/seed.py`. The production image never seeds: `SEED_DEV_DATA` is false by default.
+Every account uses the password `gaspirator-dev`: `admin@example.org` (admin), the managers of the suppliers (e.g. `cantine.voltaire@example.org`) and of the associations (e.g. `solidarite.paris-est@example.org`); the full list is in `apps/server/src/app/seed.py`. Without the variable nothing is seeded (it is false by default), so never set it in production. Outside Docker, seed with `uv --directory apps/server run python -m app.seed`.
 
 PostgreSQL 18 runs in the `db` service on `localhost:5432` (user `postgres`, password `postgres`, database `gaspirator`; override with `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`). Data is kept in the `db-data` volume. In compose, the API gets `DATABASE_URL` pointing to `db`. To run only the database for local dev:
 
