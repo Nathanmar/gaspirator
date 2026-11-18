@@ -17,61 +17,39 @@ Links: [GitHub Project](https://github.com/users/Nathanmar/projects/3) · [Notio
 
 The project was generated with Better Fullstack; `bts.jsonc` describes the stack.
 
-## Prerequisites
+## Getting started
 
-| Tool                                                      | Version                       | Notes                                                                 |
-| --------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------- |
-| Node.js                                                   | 24 (LTS)                      | Version of the CI and of the web image                                |
-| [pnpm](https://pnpm.io)                                   | 10.19.0                       | Pinned in `package.json` (`packageManager`)                           |
-| Python                                                    | 3.12 (3.11 minimum)           | Version of the API image, minimum set in `apps/server/pyproject.toml` |
-| [uv](https://docs.astral.sh/uv/)                          | 0.9.17 or later               | Version of the API image                                              |
-| [Docker](https://docs.docker.com/get-started/get-docker/) | Compose v2 (`docker compose`) | PostgreSQL, Prism and Mailpit, or the whole stack                     |
-| [Expo Go](https://expo.dev/go)                            | SDK 58                        | Optional: runs the mobile app on a phone                              |
-
-## Setup
+Requires [Docker](https://docs.docker.com/get-started/get-docker/) (Compose v2).
 
 ```sh
-pnpm install
-pnpm setup:server
+./scripts/start.sh
 ```
 
-Copy `apps/server/.env.example` to `apps/server/.env` and set `SECRET_KEY` and `DATABASE_URL`.
+| What                         | Address                                                         |
+| ---------------------------- | --------------------------------------------------------------- |
+| Web app                      | `http://localhost:5173`                                         |
+| API                          | `http://localhost:8000`, interactive docs at `/docs`            |
+| Prism (validation proxy)     | `http://localhost:4010`                                         |
+| Mailpit (e-mails caught)     | `http://localhost:8025`, SMTP on `localhost:1025`               |
+| PostgreSQL                   | `localhost:5432` (user `postgres`, password `postgres`, database `gaspirator`) |
+
+The web app talks to the API through the Prism validation proxy (`VITE_API_URL` in `apps/web/.env`), which checks every exchange against `openapi.yaml`; contract violations are reported in the `sl-violations` response header. Mailpit catches every e-mail sent by the API and never delivers it to the real address.
 
 A registration request sent without address gets the address of its SIRET or RNA number from the Sirene base, through the [API Recherche d'entreprises](https://recherche-entreprises.api.gouv.fr) (free, no key; associations with an RNA number only are not in it and must give their address). The address is then geocoded with the [Géoplateforme](https://data.geopf.fr/geocodage) of the IGN (free, no key). The API needs outbound internet access; override the services with `COMPANY_REGISTRY_URL`, `GEOCODING_URL` and `COMPANY_REGISTRY_TIMEOUT_SECONDS` (default 10 s), `GEOCODING_TIMEOUT_SECONDS` (default 5 s). The tests use fakes and never call them.
 
-Copy `apps/web/.env.example` to `apps/web/.env`. `VITE_API_URL` is the base URL of the API contract: `http://127.0.0.1:4010` is Prism, either the mock (`pnpm mock`) or the validation proxy in front of the API (see [Web app on the real API](#web-app-on-the-real-api)). The web app refuses to start without it.
+### Development data
 
-## Local development
+The API fills an empty database with 10 suppliers and 5 associations around Paris, 30 lots (available, partly reserved, reserved, collected, expired) with their reservations, and 2 pending registration requests. It runs once: as soon as the seed admin exists, it is skipped. Lot dates are relative to the day of the seed; to start over, drop the volume with `docker compose down -v`.
 
-```sh
-pnpm dev
-```
+Every account uses the password `gaspirator-dev`: `admin@example.org` (admin), the managers of the suppliers (e.g. `cantine.voltaire@example.org`) and of the associations (e.g. `solidarite.paris-est@example.org`); the full list is in `apps/server/src/app/seed.py`. The production image never seeds: `SEED_DEV_DATA` is false by default.
 
-This starts the web app and the API together; if one stops, the other stops too. To run them separately:
+### Approving an account
 
-| Command             | What it does                                 |
-| ------------------- | -------------------------------------------- |
-| `pnpm dev:web`      | Web app only                                 |
-| `pnpm dev:server`   | API only (FastAPI with auto-reload)          |
-| `pnpm build`        | Build the web app                            |
-| `pnpm test`         | Web tests (Vitest)                           |
-| `pnpm mock`         | Mock API from `openapi.yaml` (port 4010)     |
-| `pnpm test:server`  | API tests (pytest)                           |
-| `pnpm check:server` | Lint the API (Ruff)                          |
-
-### Web app on the real API
-
-```sh
-docker compose up -d db app prism
-pnpm dev:web
-```
-
-The web app (`http://localhost:5173`) talks to the API through the Prism validation proxy on `http://127.0.0.1:4010`, the default `VITE_API_URL`: Prism answers CORS for the dev server and checks every exchange against `openapi.yaml`. Stop `pnpm mock` first, both use port 4010.
-
-A new account stays `pending` until an admin approves it. Until the admin routes exist, approve one in the local database: like the approve route, this creates the association from the request (its address and geocoded position) and links it to the request and the user.
+A new account stays `pending` until an admin approves it. Until the admin routes exist, approve one in the database: like the approve route, this creates the association from the request (its address and geocoded position) and links it to the request and the user.
 
 ```sh
 docker compose exec -T db psql -U postgres -d gaspirator -v email=marie.dupont@example.org <<'SQL'
+
 begin;
 with request as (
   select r.* from registration_requests r join users u on u.id = r.user_id
@@ -92,47 +70,21 @@ SQL
 
 For a supplier, insert into `suppliers` (adding `supplier_type` to both column lists) and set `supplier_id` instead of `association_id`. Requests sent before the address lookup may have no position: send them again.
 
-## Connections
+## Tests and lint
 
-- **Web app**: `http://localhost:5173`
-- **API**: `http://localhost:8000`, interactive docs at `http://localhost:8000/docs`
-- **Mailpit** (e-mails caught in development): `http://localhost:8025`
-
-## Docker
+Requires Node.js 24, [pnpm](https://pnpm.io) 10.19.0 and [uv](https://docs.astral.sh/uv/) on the machine.
 
 ```sh
-docker compose up --build
+pnpm install
+pnpm setup:server
 ```
 
-Runs the web app on `http://localhost:3001` and the API on `http://localhost:8000`. Create `apps/web/.env` and `apps/server/.env` first.
-
-### Development data
-
-In compose, the API starts with `SEED_DEV_DATA=true`: after the migrations, `python -m app.seed` fills an empty database with 10 suppliers and 5 associations around Paris, 30 lots (available, partly reserved, reserved, collected, expired) with their reservations, and 2 pending registration requests. It runs once: as soon as the seed admin exists, it is skipped. Lot dates are relative to the day of the seed; to start over, drop the volume with `docker compose down -v`.
-
-Every account uses the password `gaspirator-dev`: `admin@example.org` (admin), the managers of the suppliers (e.g. `cantine.voltaire@example.org`) and of the associations (e.g. `solidarite.paris-est@example.org`); the full list is in `apps/server/src/app/seed.py`. The production image never seeds: `SEED_DEV_DATA` is false by default.
-
-PostgreSQL 18 runs in the `db` service on `localhost:5432` (user `postgres`, password `postgres`, database `gaspirator`; override with `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`). Data is kept in the `db-data` volume. In compose, the API gets `DATABASE_URL` pointing to `db`. To run only the database for local dev:
-
-```sh
-docker compose up -d db
-```
-
-### E-mails in development (Mailpit)
-
-The contract notifies the applicant by e-mail when an admin approves or rejects a registration request. In development, e-mails go to [Mailpit](https://mailpit.axllent.org/), a fake SMTP server that catches every message and never delivers it to the real address:
-
-```sh
-docker compose up -d mailpit
-```
-
-| What        | Address                                                   |
-| ----------- | --------------------------------------------------------- |
-| Web UI      | `http://localhost:8025` (inbox of every e-mail sent)      |
-| SMTP        | `localhost:1025` from the host, `mailpit:1025` in compose |
-| Credentials | none (no authentication, no TLS)                          |
-
-Nothing is stored: the inbox is emptied when the container is recreated.
+| Command             | What it does        |
+| ------------------- | ------------------- |
+| `pnpm test`         | Web tests (Vitest)  |
+| `pnpm test:server`  | API tests (pytest)  |
+| `pnpm lint`         | Lint the web app (Biome) |
+| `pnpm check:server` | Lint the API (Ruff) |
 
 ## Versioning
 

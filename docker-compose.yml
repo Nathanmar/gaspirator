@@ -1,24 +1,32 @@
 name: gaspirator
 
 services:
-  web:
+  frontend:
+    container_name: frontend
     build:
       context: .
       dockerfile: apps/web/Dockerfile.vite
+      target: dev
       args:
-        VITE_SERVER_URL: http://localhost:8000
-        VITE_API_URL: http://localhost:8000/api/v1
+        VITE_SERVER_URL: ${VITE_SERVER_URL:-http://localhost:8000}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api/v1}
+    volumes:
+      - .:/app
+      # Linux node_modules kept in the container, so they never mix with the host's macOS ones.
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/packages/env/node_modules
+      - /app/packages/config/node_modules
     env_file:
       - apps/web/.env
     ports:
-      - "3001:3000"
-    environment:
-      - NODE_ENV=production
+      - "5173:5173"
     depends_on:
-      - app
+      - backend
     restart: unless-stopped
 
-  app:
+  backend:
+    container_name: backend
     build:
       context: apps/server
       dockerfile: Dockerfile
@@ -27,14 +35,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - CORS_ORIGIN=http://localhost:3001
       - HOST=0.0.0.0
-      - PORT=8000
-      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-gaspirator}
-      - SMTP_HOST=mailpit
-      - SMTP_PORT=1025
-      # Development data (suppliers, associations, lots), inserted once on an empty database.
-      - SEED_DEV_DATA=true
     depends_on:
       db:
         condition: service_healthy
@@ -46,27 +47,25 @@ services:
   # Paths without the /api/v1 prefix (e.g. POST http://localhost:4010/auth/login);
   # contract violations are reported in the `sl-violations` response header.
   prism:
+    container_name: prism
     image: stoplight/prism:5.15.10
-    # --multiprocess false: the image crashes in cluster mode (reading 'isPrimary').
-    command: proxy -h 0.0.0.0 --multiprocess false /contract/openapi.yaml http://app:8000/api/v1
+    command: proxy -h 0.0.0.0 --multiprocess false /contract/openapi.yaml http://backend:8000/api/v1
     volumes:
       - ./openapi.yaml:/contract/openapi.yaml:ro
     ports:
       - "4010:4010"
     depends_on:
-      - app
+      - backend
     restart: unless-stopped
 
   db:
+    container_name: db
     image: postgres:18-alpine
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-gaspirator}
+    env_file:
+      - apps/server/.env
     ports:
       - "5432:5432"
     volumes:
-      # Postgres 18+: mount the parent dir (PGDATA is /var/lib/postgresql/18/docker)
       - db-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -75,10 +74,8 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # Mailpit: fake SMTP server for development. It catches every e-mail sent by the API
-  # (never delivered to real addresses) and shows them on http://localhost:8025.
-  # From the `app` container the SMTP server is mailpit:1025, from the host localhost:1025.
   mailpit:
+    container_name: mailpit
     image: axllent/mailpit:v1.33.0
     ports:
       - "1025:1025" # SMTP
